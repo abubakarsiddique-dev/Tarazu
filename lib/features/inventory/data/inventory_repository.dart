@@ -49,6 +49,20 @@ class InventoryRepository {
     });
   }
 
+  /// Slips from [fromDay] to [toDay] (inclusive, "yyyy-MM-dd" keys sort by date).
+  /// Range filter on ONE field, so no composite index is needed.
+  Stream<List<Purchase>> watchPurchasesRange(String shopId, String fromDay, String toDay) {
+    return _shop(shopId)
+        .collection('purchases')
+        .where('dayKey', isGreaterThanOrEqualTo: fromDay)
+        .where('dayKey', isLessThanOrEqualTo: toDay)
+        .snapshots()
+        .map((snap) => snap.docs
+            .where((d) => (d.data()['isVoided'] as bool? ?? false) == false)
+            .map(Purchase.fromDoc)
+            .toList());
+  }
+
   Stream<DailySummary> watchDaily(String shopId, String day) {
     return _shop(shopId)
         .collection('daily')
