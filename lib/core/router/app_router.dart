@@ -18,6 +18,7 @@ import '../../features/onboarding/presentation/onboarding_screen.dart';
 import '../../features/splash/presentation/splash_screen.dart';
 import '../constants/app_strings.dart';
 import 'session.dart';
+import '../../features/inventory/presentation/report_screen.dart';
 
 class Routes {
   Routes._();
@@ -35,6 +36,8 @@ class Routes {
   static const sales = '/sales';
   static const disabled = '/disabled';
   static const profileMissing = '/profile-missing';
+  static const report = '/report';
+
 }
 
 const _publicAuthPages = [Routes.login, Routes.register, Routes.forgotPassword];
@@ -84,6 +87,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: Routes.history, builder: (_, _) => const HistoryScreen()),
       GoRoute(path: Routes.newSale, builder: (_, _) => const NewSaleScreen()),
       GoRoute(path: Routes.sales, builder: (_, _) => const SalesScreen()),
+      GoRoute(path: Routes.report, builder: (_, _) => const ReportScreen()),
       GoRoute(
         path: Routes.disabled,
         builder: (_, _) => const AccountBlockedScreen(

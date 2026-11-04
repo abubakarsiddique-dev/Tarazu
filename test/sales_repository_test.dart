@@ -1,7 +1,6 @@
 // Needs:  flutter pub add --dev fake_cloud_firestore   (already added in Phase 1)
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tarazu/core/utils/format.dart';
 import 'package:tarazu/features/inventory/data/inventory_repository.dart';
 import 'package:tarazu/features/inventory/domain/models.dart';
 import 'package:tarazu/features/inventory/domain/sale_models.dart';

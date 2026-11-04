@@ -21,8 +21,10 @@ void sendWrite(Future<void> write, WriteKind kind, WriteErrorHandler? onError) {
 // if you want all texts (and a future Urdu translation) in one place.
 const errSlipRejected =
     'The last purchase slip could not be saved and was removed. Please enter it again.';
-const errVoidRejected = 'The purchase could not be cancelled. Please try again.';
-const errMaterialRejected = 'The material change could not be saved. Please try again.';
+const errVoidRejected =
+    'The purchase could not be cancelled. Please try again.';
+const errMaterialRejected =
+    'The material change could not be saved. Please try again.';
 const errWriteRejected = 'A change could not be saved. Please try again.';
 
 /// One failure event. Deliberately has no == override, so two failures in a row
@@ -34,25 +36,31 @@ class WriteFailure {
   final Object error;
 
   String get message => switch (kind) {
-        WriteKind.slip => errSlipRejected,
-        WriteKind.voidSlip => errVoidRejected,
-        WriteKind.material => errMaterialRejected,
-        WriteKind.other => errWriteRejected,
-    // TODO: Handle this case.
-    WriteKind.adjustment => throw UnimplementedError(),
-    // TODO: Handle this case.
-    WriteKind.voidSale => throw UnimplementedError(),
-    // TODO: Handle this case.
-    WriteKind.sale => throw UnimplementedError(),
-      };
+      WriteKind.slip => errSlipRejected,
+      WriteKind.voidSlip => errVoidRejected,
+      WriteKind.material => errMaterialRejected,
+      WriteKind.sale => errSaleRejected,
+      WriteKind.voidSale => errVoidSaleRejected,
+      WriteKind.adjustment => errAdjustRejected,
+      WriteKind.other => errWriteRejected,
+    };
 }
 
 class WriteFailureNotifier extends Notifier<WriteFailure?> {
   @override
   WriteFailure? build() => null;
 
-  void report(WriteKind kind, Object error) => state = WriteFailure(kind, error);
+  void report(WriteKind kind, Object error) =>
+      state = WriteFailure(kind, error);
 }
 
 final writeFailureProvider =
-    NotifierProvider<WriteFailureNotifier, WriteFailure?>(WriteFailureNotifier.new);
+    NotifierProvider<WriteFailureNotifier, WriteFailure?>(
+      WriteFailureNotifier.new,
+    );
+const errSaleRejected =
+    'The last sale could not be saved and was removed. Please enter it again.';
+const errVoidSaleRejected =
+    'The sale could not be cancelled. Please try again.';
+const errAdjustRejected =
+    'The stock change could not be saved. Please try again.';

@@ -11,18 +11,26 @@ import '../../auth/domain/app_user.dart';
 import '../../inventory/application/inventory_providers.dart';
 import '../../inventory/domain/models.dart';
 import '../../inventory/presentation/slip_sheet.dart';
+import '../../inventory/presentation/report_screen.dart' show ReportStrings;
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
-  Future<void> _confirmVoid(BuildContext context, WidgetRef ref, Purchase p) async {
+  Future<void> _confirmVoid(
+    BuildContext context,
+    WidgetRef ref,
+    Purchase p,
+  ) async {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text(AppStrings.voidPurchase),
         content: const Text(AppStrings.voidBody),
         actions: [
-          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text(AppStrings.keep)),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text(AppStrings.keep),
+          ),
           FilledButton(
             style: FilledButton.styleFrom(minimumSize: const Size(96, 44)),
             onPressed: () => Navigator.of(ctx).pop(true),
@@ -35,7 +43,11 @@ class HomeScreen extends ConsumerWidget {
   }
 
   /// Lets the owner set the phone number that is printed on shared slips.
-  Future<void> _editShopDetails(BuildContext context, WidgetRef ref, AppUser user) async {
+  Future<void> _editShopDetails(
+    BuildContext context,
+    WidgetRef ref,
+    AppUser user,
+  ) async {
     final result = await showDialog<String>(
       context: context,
       builder: (_) => _ShopDetailsDialog(initialPhone: user.phone),
@@ -49,7 +61,9 @@ class HomeScreen extends ConsumerWidget {
     final theme = Theme.of(context);
     final user = ref.watch(userProfileProvider).value;
     final day = dayKey(DateTime.now());
-    final summary = ref.watch(dailySummaryProvider(day)).value ?? const DailySummary.empty();
+    final summary =
+        ref.watch(dailySummaryProvider(day)).value ??
+        const DailySummary.empty();
     final purchases = ref.watch(purchasesForDayProvider(day));
 
     return Scaffold(
@@ -59,12 +73,15 @@ class HomeScreen extends ConsumerWidget {
           IconButton(
             tooltip: AppStrings.shopDetails,
             icon: const Icon(Icons.storefront_outlined),
-            onPressed: user == null ? null : () => _editShopDetails(context, ref, user),
+            onPressed: user == null
+                ? null
+                : () => _editShopDetails(context, ref, user),
           ),
           IconButton(
             tooltip: AppStrings.logout,
             icon: const Icon(Icons.logout),
-            onPressed: () => ref.read(authControllerProvider.notifier).signOut(),
+            onPressed: () =>
+                ref.read(authControllerProvider.notifier).signOut(),
           ),
         ],
       ),
@@ -87,10 +104,14 @@ class HomeScreen extends ConsumerWidget {
                   const SizedBox(height: 8),
                   Text(
                     formatRs(summary.totalAmount),
-                    style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
+                    style: theme.textTheme.headlineMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   const SizedBox(height: 4),
-                  Text('${formatKg(summary.totalWeightGrams)} • ${summary.entryCount} ${AppStrings.entries}'),
+                  Text(
+                    '${formatKg(summary.totalWeightGrams)} • ${summary.entryCount} ${AppStrings.entries}',
+                  ),
                 ],
               ),
             ),
@@ -120,6 +141,12 @@ class HomeScreen extends ConsumerWidget {
             onPressed: () => context.push(Routes.history),
             icon: const Icon(Icons.bar_chart),
             label: const Text(AppStrings.history),
+          ),
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
+            onPressed: () => context.push(Routes.report),
+            icon: const Icon(Icons.assessment_outlined),
+            label: const Text(ReportStrings.title),
           ),
           const SizedBox(height: 24),
           Text(AppStrings.purchasesToday, style: theme.textTheme.titleMedium),
@@ -151,17 +178,25 @@ class HomeScreen extends ConsumerWidget {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Tooltip(
-                              message: p.pendingSync ? AppStrings.waitingToSync : AppStrings.synced,
+                              message: p.pendingSync
+                                  ? AppStrings.waitingToSync
+                                  : AppStrings.synced,
                               child: Icon(
-                                p.pendingSync ? Icons.cloud_off : Icons.cloud_done_outlined,
+                                p.pendingSync
+                                    ? Icons.cloud_off
+                                    : Icons.cloud_done_outlined,
                                 size: 18,
-                                color: p.pendingSync ? theme.colorScheme.error : theme.colorScheme.outline,
+                                color: p.pendingSync
+                                    ? theme.colorScheme.error
+                                    : theme.colorScheme.outline,
                               ),
                             ),
                             const SizedBox(width: 8),
                             Text(
                               formatRs(p.totalAmount),
-                              style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ],
                         ),
@@ -229,18 +264,26 @@ class _ShopDetailsDialogState extends State<_ShopDetailsDialog> {
               controller: _phone,
               autofocus: true,
               keyboardType: TextInputType.phone,
-              decoration: const InputDecoration(labelText: AppStrings.shopPhone),
+              decoration: const InputDecoration(
+                labelText: AppStrings.shopPhone,
+              ),
               validator: Validators.phoneOptional,
             ),
             const Padding(
               padding: EdgeInsets.only(top: 8),
-              child: Text(AppStrings.phoneShownOnSlip, style: TextStyle(fontSize: 12)),
+              child: Text(
+                AppStrings.phoneShownOnSlip,
+                style: TextStyle(fontSize: 12),
+              ),
             ),
           ],
         ),
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text(AppStrings.cancel)),
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text(AppStrings.cancel),
+        ),
         FilledButton(
           style: FilledButton.styleFrom(minimumSize: const Size(96, 44)),
           onPressed: _submit,

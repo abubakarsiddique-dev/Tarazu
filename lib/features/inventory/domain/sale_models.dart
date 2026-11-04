@@ -94,9 +94,9 @@ enum AdjustmentReason { correction, loss, other }
 int remainingToSell(List<StockItem> stock, List<SaleItem> onSlip, String materialId) {
   final inStock = stock
       .where((s) => s.materialId == materialId)
-      .fold<int>(0, (sum, s) => sum + s.weightGrams);
+      .fold<int>(0, (total, s) => total + s.weightGrams);
   final used = onSlip
       .where((i) => i.materialId == materialId)
-      .fold<int>(0, (sum, i) => sum + i.weightGrams);
+      .fold<int>(0, (total, i) => total + i.weightGrams);
   return inStock - used;
 }
