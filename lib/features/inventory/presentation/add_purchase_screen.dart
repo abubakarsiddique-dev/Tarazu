@@ -23,6 +23,7 @@ class _AddPurchaseScreenState extends ConsumerState<AddPurchaseScreen> {
   final _seller = TextEditingController();
   final List<PurchaseItem> _items = [];
   ScrapMaterial? _selected;
+  PriceUnit _unit = PriceUnit.kg;
   bool _showMaterialError = false;
 
   @override
@@ -33,11 +34,26 @@ class _AddPurchaseScreenState extends ConsumerState<AddPurchaseScreen> {
     super.dispose();
   }
 
+  static String _fmt(double v) =>
+      v > 0 ? v.toString().replaceFirst(RegExp(r'\.0$'), '') : '';
+
   void _select(ScrapMaterial m) {
     setState(() {
       _selected = m;
+      _unit = m.priceUnit;
       _showMaterialError = false;
-      _rate.text = m.rate > 0 ? m.rate.toString().replaceFirst(RegExp(r'\.0$'), '') : '';
+      _rate.text = _fmt(m.rateFor(_unit));
+    });
+  }
+
+  /// Switch this item between per-kg and per-paka-seer pricing; the material's
+  /// fixed rate for that unit is filled in (still editable).
+  void _setUnit(PriceUnit u) {
+    final m = _selected;
+    if (m == null) return;
+    setState(() {
+      _unit = u;
+      _rate.text = _fmt(m.rateFor(u));
     });
   }
 
@@ -52,7 +68,7 @@ class _AddPurchaseScreenState extends ConsumerState<AddPurchaseScreen> {
     final r = parseNumber(_rate.text);
     final m = _selected;
     if (m == null || g == null || r == null || g <= 0 || r <= 0) return null;
-    return computeAmount(g, r, m.priceUnit);
+    return computeAmount(g, r, _unit);
   }
 
   int get _slipTotal => _items.fold(0, (s, i) => s + i.amount);
@@ -69,9 +85,9 @@ class _AddPurchaseScreenState extends ConsumerState<AddPurchaseScreen> {
       materialId: m.id,
       materialName: m.name,
       weightGrams: grams,
-      unit: m.priceUnit,
+      unit: _unit,
       rate: rate,
-      amount: computeAmount(grams, rate, m.priceUnit),
+      amount: computeAmount(grams, rate, _unit),
     );
     setState(() {
       _items.add(item);
@@ -131,7 +147,7 @@ class _AddPurchaseScreenState extends ConsumerState<AddPurchaseScreen> {
     }
 
     final selected = _selected;
-    final isSeer = selected?.priceUnit == PriceUnit.pakaSeer;
+    final isSeer = selected != null && _unit == PriceUnit.pakaSeer;
     final lineTotal = _lineTotal;
     final grams = _grams;
     final keyboardOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
@@ -229,6 +245,29 @@ class _AddPurchaseScreenState extends ConsumerState<AddPurchaseScreen> {
                 padding: const EdgeInsets.only(top: 8),
                 child: Text(AppStrings.materialRequired, style: TextStyle(color: theme.colorScheme.error)),
               ),
+            if (selected != null) ...[
+              const SizedBox(height: 16),
+              Text(AppStrings.priceBy, style: theme.textTheme.titleSmall),
+              const SizedBox(height: 8),
+              SegmentedButton<PriceUnit>(
+                segments: [
+                  ButtonSegment(
+                    value: PriceUnit.kg,
+                    label: Text(selected.rateKg > 0
+                        ? '${AppStrings.perKg} (${formatRate(selected.rateKg)})'
+                        : AppStrings.perKg),
+                  ),
+                  ButtonSegment(
+                    value: PriceUnit.pakaSeer,
+                    label: Text(selected.ratePakaSeer > 0
+                        ? '${AppStrings.perPakaSeer} (${formatRate(selected.ratePakaSeer)})'
+                        : AppStrings.perPakaSeer),
+                  ),
+                ],
+                selected: {_unit},
+                onSelectionChanged: (s) => _setUnit(s.first),
+              ),
+            ],
             const SizedBox(height: 16),
             Form(
               key: _itemFormKey,

@@ -34,7 +34,8 @@ class ScrapMaterial {
   const ScrapMaterial({
     required this.id,
     required this.name,
-    required this.rate,
+    required this.rateKg,
+    required this.ratePakaSeer,
     required this.priceUnit,
     required this.isActive,
   });
@@ -42,18 +43,33 @@ class ScrapMaterial {
   final String id;
   final String name;
 
-  /// Rs per [priceUnit].
-  final double rate;
+  /// Fixed rate in Rs per kg (0 = not set).
+  final double rateKg;
+
+  /// Fixed rate in Rs per paka seer (0 = not set).
+  final double ratePakaSeer;
+
+  /// Which unit is pre-selected when this material is added to a slip.
   final PriceUnit priceUnit;
   final bool isActive;
 
+  double rateFor(PriceUnit unit) => unit == PriceUnit.pakaSeer ? ratePakaSeer : rateKg;
+
+  /// Rate of the default unit.
+  double get rate => rateFor(priceUnit);
+
   factory ScrapMaterial.fromDoc(QueryDocumentSnapshot<Map<String, dynamic>> d) {
     final m = d.data();
+    final unit = PriceUnit.fromString(m['priceUnit'] as String?);
+    // Older docs only have one `rate` (ratePerKg = even older name) for [unit].
+    final legacy = ((m['rate'] ?? m['ratePerKg']) as num?)?.toDouble() ?? 0;
     return ScrapMaterial(
       id: d.id,
       name: m['name'] as String? ?? '',
-      rate: ((m['rate'] ?? m['ratePerKg']) as num?)?.toDouble() ?? 0, // ratePerKg = old name
-      priceUnit: PriceUnit.fromString(m['priceUnit'] as String?),
+      rateKg: (m['rateKg'] as num?)?.toDouble() ?? (unit == PriceUnit.kg ? legacy : 0),
+      ratePakaSeer:
+          (m['ratePakaSeer'] as num?)?.toDouble() ?? (unit == PriceUnit.pakaSeer ? legacy : 0),
+      priceUnit: unit,
       isActive: m['isActive'] as bool? ?? true,
     );
   }

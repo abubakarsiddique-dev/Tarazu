@@ -58,18 +58,23 @@ class InventoryActions {
     'Iron', 'Steel', 'Cardboard', 'Paper', 'Plastic', 'Aluminium', 'Copper', 'Brass',
   ];
 
-  void addMaterial(String name, double rate, PriceUnit unit) =>
-      _repo.addMaterial(_shopId, name, rate, unit);
+  void addMaterial(String name, double rateKg, double ratePakaSeer, PriceUnit unit) =>
+      _repo.addMaterial(_shopId, name, rateKg, ratePakaSeer, unit);
 
   void updateMaterial(
     String id, {
     String? name,
-    double? rate,
+    double? rateKg,
+    double? ratePakaSeer,
     PriceUnit? priceUnit,
     bool? isActive,
   }) =>
       _repo.updateMaterial(_shopId, id,
-          name: name, rate: rate, priceUnit: priceUnit, isActive: isActive);
+          name: name,
+          rateKg: rateKg,
+          ratePakaSeer: ratePakaSeer,
+          priceUnit: priceUnit,
+          isActive: isActive);
 
   void seedCommonMaterials() => _repo.seedMaterials(_shopId, commonMaterials);
 

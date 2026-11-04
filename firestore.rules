@@ -55,17 +55,22 @@ service cloud.firestore {
         allow read: if isShopOwner(shopId);
 
         allow create: if isShopOwner(shopId)
-          && request.resource.data.keys().hasOnly(['name','rate','priceUnit','isActive','createdAt'])
+          && request.resource.data.keys().hasOnly(
+               ['name','rate','rateKg','ratePakaSeer','priceUnit','isActive','createdAt'])
           && request.resource.data.name is string
           && request.resource.data.name.size() > 0
           && request.resource.data.name.size() <= 60
           && request.resource.data.rate is number
           && request.resource.data.rate >= 0
+          && request.resource.data.rateKg is number
+          && request.resource.data.rateKg >= 0
+          && request.resource.data.ratePakaSeer is number
+          && request.resource.data.ratePakaSeer >= 0
           && request.resource.data.priceUnit in ['kg','pakaSeer']
           && request.resource.data.isActive is bool;
 
         allow update: if isShopOwner(shopId)
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name','rate','priceUnit','isActive'])
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name','rate','rateKg','ratePakaSeer','priceUnit','isActive'])
           && (!('priceUnit' in request.resource.data) || request.resource.data.priceUnit in ['kg','pakaSeer']);
 
         allow delete: if false; // deactivate instead, history keeps its name
