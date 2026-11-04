@@ -67,10 +67,19 @@ class InventoryRepository {
 
   // ---------- materials ----------
 
-  void addMaterial(String shopId, String name, double rate, PriceUnit unit) {
+  void addMaterial(
+    String shopId,
+    String name,
+    double rateKg,
+    double ratePakaSeer,
+    PriceUnit unit,
+  ) {
     _send(_shop(shopId).collection('materials').doc().set({
       'name': name.trim(),
-      'rate': rate,
+      'rateKg': rateKg,
+      'ratePakaSeer': ratePakaSeer,
+      // `rate` = rate of the default unit (kept for older app versions).
+      'rate': unit == PriceUnit.pakaSeer ? ratePakaSeer : rateKg,
       'priceUnit': unit.name,
       'isActive': true,
       'createdAt': Timestamp.now(),
@@ -81,16 +90,21 @@ class InventoryRepository {
     String shopId,
     String id, {
     String? name,
-    double? rate,
+    double? rateKg,
+    double? ratePakaSeer,
     PriceUnit? priceUnit,
     bool? isActive,
   }) {
     final data = <String, Object?>{
       'name': ?name?.trim(),
-      'rate': ?rate,
+      'rateKg': ?rateKg,
+      'ratePakaSeer': ?ratePakaSeer,
       'priceUnit': ?priceUnit?.name,
       'isActive': ?isActive,
     };
+    if (rateKg != null && ratePakaSeer != null && priceUnit != null) {
+      data['rate'] = priceUnit == PriceUnit.pakaSeer ? ratePakaSeer : rateKg;
+    }
     if (data.isEmpty) return;
     _send(_shop(shopId).collection('materials').doc(id).update(data));
   }
@@ -101,6 +115,8 @@ class InventoryRepository {
       batch.set(_shop(shopId).collection('materials').doc(), {
         'name': name,
         'rate': 0,
+        'rateKg': 0,
+        'ratePakaSeer': 0,
         'priceUnit': PriceUnit.kg.name,
         'isActive': true,
         'createdAt': Timestamp.now(),

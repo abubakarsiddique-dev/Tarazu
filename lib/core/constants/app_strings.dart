@@ -99,6 +99,10 @@ class AppStrings {
   static const perPakaSeer = 'Per paka seer';
   static const ratePerPakaSeer = 'Rate per paka seer (Rs)';
   static const rateIs = 'Rate is';
+  static const fixedRates = 'Fixed rates (set one or both)';
+  static const defaultUnit = 'Default unit on slip';
+  static const priceBy = 'Price by';
+  static const rateNotSetShort = 'not set';
   static const kachaToPaka = 'Scale weight is converted: 1 paka seer = 1.25 kg';
   static const slip = 'Purchase slip';
   static const items = 'items';
