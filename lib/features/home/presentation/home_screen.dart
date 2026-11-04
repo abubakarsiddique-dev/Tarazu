@@ -8,6 +8,7 @@ import '../../../core/utils/format.dart';
 import '../../auth/application/auth_providers.dart';
 import '../../inventory/application/inventory_providers.dart';
 import '../../inventory/domain/models.dart';
+import '../../inventory/presentation/slip_sheet.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -29,79 +30,6 @@ class HomeScreen extends ConsumerWidget {
       ),
     );
     if (ok == true) ref.read(inventoryActionsProvider).voidPurchase(p);
-  }
-
-  /// The slip, like a printed receipt.
-  void _showSlip(BuildContext context, WidgetRef ref, Purchase p) {
-    final theme = Theme.of(context);
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      builder: (ctx) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(AppStrings.slip, style: theme.textTheme.titleLarge),
-              const SizedBox(height: 4),
-              Text(
-                '${p.dayKey}  ${formatTime(p.createdAt)}'
-                '${p.sellerName.isEmpty ? '' : '  •  ${AppStrings.seller}: ${p.sellerName}'}',
-              ),
-              const Divider(height: 24),
-              Flexible(
-                child: ListView(
-                  shrinkWrap: true,
-                  children: [
-                    for (final i in p.items)
-                      ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        title: Text(i.materialName),
-                        subtitle: Text(i.detail),
-                        trailing: Text(formatRs(i.amount), style: theme.textTheme.titleMedium),
-                      ),
-                  ],
-                ),
-              ),
-              const Divider(height: 24),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(AppStrings.total, style: theme.textTheme.titleMedium),
-                  Text(
-                    formatRs(p.totalAmount),
-                    style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextButton(
-                      onPressed: () {
-                        Navigator.of(ctx).pop();
-                        _confirmVoid(context, ref, p);
-                      },
-                      child: Text(AppStrings.voidAction, style: TextStyle(color: theme.colorScheme.error)),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: FilledButton(
-                      onPressed: () => Navigator.of(ctx).pop(),
-                      child: const Text(AppStrings.close),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
   }
 
   @override
@@ -170,6 +98,12 @@ class HomeScreen extends ConsumerWidget {
               ),
             ],
           ),
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
+            onPressed: () => context.push(Routes.history),
+            icon: const Icon(Icons.bar_chart),
+            label: const Text(AppStrings.history),
+          ),
           const SizedBox(height: 24),
           Text(AppStrings.purchasesToday, style: theme.textTheme.titleMedium),
           const SizedBox(height: 8),
@@ -214,7 +148,7 @@ class HomeScreen extends ConsumerWidget {
                             ),
                           ],
                         ),
-                        onTap: () => _showSlip(context, ref, p),
+                        onTap: () => showSlipSheet(context, p, onVoid: () => _confirmVoid(context, ref, p)),
                         onLongPress: () => _confirmVoid(context, ref, p),
                       ),
                     ),

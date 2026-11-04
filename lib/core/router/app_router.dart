@@ -9,6 +9,7 @@ import '../../features/auth/presentation/login_screen.dart';
 import '../../features/auth/presentation/register_screen.dart';
 import '../../features/home/presentation/home_screen.dart';
 import '../../features/inventory/presentation/add_purchase_screen.dart';
+import '../../features/inventory/presentation/history_screen.dart';
 import '../../features/inventory/presentation/materials_screen.dart';
 import '../../features/inventory/presentation/stock_screen.dart';
 import '../../features/onboarding/presentation/onboarding_screen.dart';
@@ -27,6 +28,7 @@ class Routes {
   static const addPurchase = '/purchases/new';
   static const materials = '/materials';
   static const stock = '/stock';
+  static const history = '/history';
   static const disabled = '/disabled';
   static const profileMissing = '/profile-missing';
 }
@@ -75,6 +77,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: Routes.addPurchase, builder: (_, _) => const AddPurchaseScreen()),
       GoRoute(path: Routes.materials, builder: (_, _) => const MaterialsScreen()),
       GoRoute(path: Routes.stock, builder: (_, _) => const StockScreen()),
+      GoRoute(path: Routes.history, builder: (_, _) => const HistoryScreen()),
       GoRoute(
         path: Routes.disabled,
         builder: (_, _) => const AccountBlockedScreen(

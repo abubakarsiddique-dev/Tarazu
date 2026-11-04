@@ -26,7 +26,15 @@ final purchasesForDayProvider = StreamProvider.family<List<Purchase>, String>((r
   return ref.watch(inventoryRepositoryProvider).watchPurchases(shopId, day);
 });
 
-final dailySummaryProvider = StreamProvider.family<DailySummary, String>((ref, day) {
+/// Slips between two day keys (inclusive). Used by the History screen.
+final purchasesRangeProvider =
+    StreamProvider.family<List<Purchase>, ({String from, String to})>((ref, range) {
+  final shopId = ref.watch(shopIdProvider);
+  if (shopId == null) return Stream.value(const <Purchase>[]);
+  return ref.watch(inventoryRepositoryProvider).watchPurchasesRange(shopId, range.from, range.to);
+});
+
+final dailySummaryProvider =StreamProvider.family<DailySummary, String>((ref, day) {
   final shopId = ref.watch(shopIdProvider);
   if (shopId == null) return Stream.value(const DailySummary.empty());
   return ref.watch(inventoryRepositoryProvider).watchDaily(shopId, day);

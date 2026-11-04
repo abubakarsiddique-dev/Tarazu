@@ -108,4 +108,16 @@ class AppStrings {
   static const items = 'items';
   static const seller = 'Seller';
   static const close = 'Close';
+
+  // History
+  static const history = 'History';
+  static const periodDay = 'Day';
+  static const periodWeek = 'Week';
+  static const periodMonth = 'Month';
+  static const allMaterials = 'All materials';
+  static const byMaterial = 'By material';
+  static const byDay = 'By day';
+  static const slipsOfDay = 'Slips';
+  static const nothingInPeriod = 'No purchases in this period.';
+  static const previous = 'Previous';
 }
