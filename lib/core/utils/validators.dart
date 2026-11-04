@@ -5,6 +5,14 @@ class Validators {
 
   static final _emailRe = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
 
+  static final _phoneRe = RegExp(r'^[0-9+\-\s()]{7,20}$');
+
+  /// Phone is optional: empty is fine, otherwise it must look like a number.
+  static String? phoneOptional(String? v) {
+    if (v == null || v.trim().isEmpty) return null;
+    return _phoneRe.hasMatch(v.trim()) ? null : AppStrings.phoneInvalid;
+  }
+
   static String? requiredField(String? v) =>
       (v == null || v.trim().isEmpty) ? AppStrings.fieldRequired : null;
 

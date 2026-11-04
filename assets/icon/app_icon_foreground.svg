@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <g transform="translate(512 512) scale(0.72) translate(-512 -512)">
+
+  <g transform="translate(0,-24)">
+    <!-- hanging strings -->
+    <g stroke="#FFFFFF" stroke-width="20" stroke-linecap="round" fill="none">
+      <path d="M252 324 L152 560 M252 324 L352 560"/>
+      <path d="M772 324 L672 560 M772 324 L872 560"/>
+    </g>
+    <!-- base + pillar -->
+    <rect x="342" y="758" width="340" height="50" rx="25" fill="#FFFFFF"/>
+    <rect x="488" y="300" width="48" height="470" rx="24" fill="#FFFFFF"/>
+    <!-- beam -->
+    <rect x="212" y="284" width="600" height="46" rx="23" fill="#FFFFFF"/>
+    <!-- pivot -->
+    <circle cx="512" cy="307" r="38" fill="#FFFFFF"/>
+    <circle cx="512" cy="307" r="14" fill="#1B5E20"/>
+    <!-- left pan with coin -->
+    <path d="M132 560 H372 C372 640 320 692 252 692 C184 692 132 640 132 560 Z" fill="#FFFFFF"/>
+    <circle cx="252" cy="506" r="56" fill="#FFC107"/>
+    <circle cx="252" cy="506" r="34" fill="none" stroke="#FF8F00" stroke-width="10"/>
+    <!-- right pan with scrap stack -->
+    <path d="M652 560 H892 C892 640 840 692 772 692 C704 692 652 640 652 560 Z" fill="#FFFFFF"/>
+    <rect x="708" y="508" width="128" height="40" rx="8" fill="#FFC107"/>
+    <rect x="724" y="468" width="96" height="40" rx="8" fill="#FFB300"/>
+    <rect x="744" y="428" width="60" height="40" rx="8" fill="#FF8F00"/>
+  </g>
+  </g>
+</svg>
