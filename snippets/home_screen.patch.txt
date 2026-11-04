@@ -1,0 +1,27 @@
+lib/features/home/presentation/home_screen.dart  (1 edit + 1 import)
+
+1) import:
+   import '../../inventory/presentation/dispatch_screen.dart' show DispatchStrings;
+
+2) Replace the single "History" OutlinedButton.icon (the one with Routes.history) by this Row,
+   so Stock-out and History sit side by side:
+
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () => context.push(Routes.dispatch),
+                  icon: const Icon(Icons.local_shipping_outlined),
+                  label: const Text(DispatchStrings.title),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () => context.push(Routes.history),
+                  icon: const Icon(Icons.bar_chart),
+                  label: const Text(AppStrings.history),
+                ),
+              ),
+            ],
+          ),

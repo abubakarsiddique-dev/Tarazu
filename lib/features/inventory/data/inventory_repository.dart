@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../../core/sync/write_failures.dart';
 import '../domain/models.dart';
+import '../domain/sale_models.dart';
 
 /// Offline-first rules used here:
 ///  * Writes are NOT awaited. Firestore's future only completes when the SERVER
@@ -227,5 +228,148 @@ class InventoryRepository {
       );
     });
     _send(batch.commit(), WriteKind.voidSlip);
+  }
+
+  // ---------- sales (dispatch to a bigger dealer / factory) ----------
+
+  /// Single-field filter only, so no composite index is needed.
+  Stream<List<Sale>> watchSales(String shopId, String day) {
+    return _shop(shopId)
+        .collection('sales')
+        .where('dayKey', isEqualTo: day)
+        .snapshots(includeMetadataChanges: true)
+        .map((snap) {
+      final list = snap.docs
+          .where((d) => (d.data()['isVoided'] as bool? ?? false) == false)
+          .map(Sale.fromDoc)
+          .toList()
+        ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      return list;
+    });
+  }
+
+  Stream<DailySummary> watchSalesDaily(String shopId, String day) {
+    return _shop(shopId)
+        .collection('salesDaily')
+        .doc(day)
+        .snapshots()
+        .map((s) => DailySummary.fromMap(s.data()));
+  }
+
+  Map<String, ({String name, int grams})> _saleDeltas(List<SaleItem> items) {
+    final out = <String, ({String name, int grams})>{};
+    for (final i in items) {
+      final prev = out[i.materialId];
+      out[i.materialId] = (name: i.materialName, grams: (prev?.grams ?? 0) + i.weightGrams);
+    }
+    return out;
+  }
+
+  /// Saves the sale, adds to the day's sales totals and TAKES the weight out of stock,
+  /// all in one batch (so they can never disagree).
+  void addSale({
+    required String shopId,
+    required String uid,
+    required String buyerName,
+    required List<SaleItem> items,
+  }) {
+    if (items.isEmpty) return;
+    final now = DateTime.now();
+    final day = dayKey(now);
+    final totalAmount = items.fold<int>(0, (s, i) => s + i.amount);
+    final totalGrams = items.fold<int>(0, (s, i) => s + i.weightGrams);
+    final shop = _shop(shopId);
+
+    final batch = _db.batch()
+      ..set(shop.collection('sales').doc(), {
+        'items': items.map((i) => i.toMap()).toList(),
+        'totalAmount': totalAmount,
+        'totalWeightGrams': totalGrams,
+        'buyerName': buyerName.trim(),
+        'dayKey': day,
+        'createdAt': Timestamp.fromDate(now),
+        'createdBy': uid,
+        'isVoided': false,
+      })
+      ..set(
+        shop.collection('salesDaily').doc(day),
+        {
+          'totalAmount': FieldValue.increment(totalAmount),
+          'totalWeightGrams': FieldValue.increment(totalGrams),
+          'entryCount': FieldValue.increment(1),
+        },
+        SetOptions(merge: true),
+      );
+    _saleDeltas(items).forEach((materialId, d) {
+      batch.set(
+        shop.collection('stock').doc(materialId),
+        {'materialName': d.name, 'weightGrams': FieldValue.increment(-d.grams)},
+        SetOptions(merge: true),
+      );
+    });
+    _send(batch.commit(), WriteKind.sale);
+  }
+
+  /// Keeps the record (audit trail), puts the weight back in stock and
+  /// reduces the day's sales totals.
+  void voidSale(String shopId, Sale s) {
+    final shop = _shop(shopId);
+    final batch = _db.batch()
+      ..update(shop.collection('sales').doc(s.id), {
+        'isVoided': true,
+        'voidedAt': Timestamp.now(),
+      })
+      ..set(
+        shop.collection('salesDaily').doc(s.dayKey),
+        {
+          'totalAmount': FieldValue.increment(-s.totalAmount),
+          'totalWeightGrams': FieldValue.increment(-s.totalWeightGrams),
+          'entryCount': FieldValue.increment(-1),
+        },
+        SetOptions(merge: true),
+      );
+    _saleDeltas(s.items).forEach((materialId, d) {
+      batch.set(
+        shop.collection('stock').doc(materialId),
+        {'materialName': d.name, 'weightGrams': FieldValue.increment(d.grams)},
+        SetOptions(merge: true),
+      );
+    });
+    _send(batch.commit(), WriteKind.voidSale);
+  }
+
+  // ---------- manual stock adjustment ----------
+
+  /// [deltaGrams] > 0 adds to stock, < 0 removes. The adjustment is kept as a
+  /// permanent record; to undo one, make another adjustment.
+  void adjustStock({
+    required String shopId,
+    required String uid,
+    required String materialId,
+    required String materialName,
+    required int deltaGrams,
+    required AdjustmentReason reason,
+    String note = '',
+  }) {
+    if (deltaGrams == 0) return;
+    final now = DateTime.now();
+    final shop = _shop(shopId);
+    final batch = _db.batch()
+      ..set(shop.collection('adjustments').doc(), {
+        'materialId': materialId,
+        'materialName': materialName,
+        'deltaGrams': deltaGrams,
+        'reason': reason.name,
+        'note': note.trim(),
+        'dayKey': dayKey(now),
+        'createdAt': Timestamp.fromDate(now),
+        'createdBy': uid,
+      })
+      ..set(
+        shop.collection('stock').doc(materialId),
+        {'materialName': materialName, 'weightGrams': FieldValue.increment(deltaGrams)},
+        SetOptions(merge: true),
+      );
+    _send(batch.commit(), WriteKind.adjustment);
   }
 }

@@ -4,6 +4,7 @@ import '../../../core/sync/write_failures.dart';
 import '../../auth/application/auth_providers.dart';
 import '../data/inventory_repository.dart';
 import '../domain/models.dart';
+import '../domain/sale_models.dart';
 
 final inventoryRepositoryProvider = Provider<InventoryRepository>(
   (ref) => InventoryRepository(
@@ -51,6 +52,18 @@ final stockProvider = StreamProvider<List<StockItem>>((ref) {
   return ref.watch(inventoryRepositoryProvider).watchStock(shopId);
 });
 
+final salesForDayProvider = StreamProvider.family<List<Sale>, String>((ref, day) {
+  final shopId = ref.watch(shopIdProvider);
+  if (shopId == null) return Stream.value(const <Sale>[]);
+  return ref.watch(inventoryRepositoryProvider).watchSales(shopId, day);
+});
+
+final salesDailyProvider = StreamProvider.family<DailySummary, String>((ref, day) {
+  final shopId = ref.watch(shopIdProvider);
+  if (shopId == null) return Stream.value(const DailySummary.empty());
+  return ref.watch(inventoryRepositoryProvider).watchSalesDaily(shopId, day);
+});
+
 /// Thin facade so screens never deal with shopId / uid.
 class InventoryActions {
   InventoryActions(this._ref);
@@ -95,6 +108,28 @@ class InventoryActions {
       _repo.addSlip(shopId: _shopId, uid: _uid, sellerName: sellerName, items: items);
 
   void voidPurchase(Purchase p) => _repo.voidPurchase(_shopId, p);
+
+  void addSale({required List<SaleItem> items, String buyerName = ''}) =>
+      _repo.addSale(shopId: _shopId, uid: _uid, buyerName: buyerName, items: items);
+
+  void voidSale(Sale s) => _repo.voidSale(_shopId, s);
+
+  void adjustStock({
+    required String materialId,
+    required String materialName,
+    required int deltaGrams,
+    required AdjustmentReason reason,
+    String note = '',
+  }) =>
+      _repo.adjustStock(
+        shopId: _shopId,
+        uid: _uid,
+        materialId: materialId,
+        materialName: materialName,
+        deltaGrams: deltaGrams,
+        reason: reason,
+        note: note,
+      );
 }
 
 final inventoryActionsProvider = Provider<InventoryActions>((ref) => InventoryActions(ref));

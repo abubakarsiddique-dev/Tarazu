@@ -1,0 +1,10 @@
+lib/core/router/app_router.dart  (3 small edits)
+
+1) imports (with the other inventory imports):
+   import '../../features/inventory/presentation/dispatch_screen.dart';
+
+2) class Routes: add one line
+   static const dispatch = '/dispatch';
+
+3) routes list: add after the history GoRoute
+   GoRoute(path: Routes.dispatch, builder: (_, _) => const DispatchScreen()),

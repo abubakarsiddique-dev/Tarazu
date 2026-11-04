@@ -62,6 +62,9 @@ void main() {
       expect(WriteFailure(WriteKind.slip, 'x').message, errSlipRejected);
       expect(WriteFailure(WriteKind.voidSlip, 'x').message, errVoidRejected);
       expect(WriteFailure(WriteKind.material, 'x').message, errMaterialRejected);
+      expect(WriteFailure(WriteKind.sale, 'x').message, errSaleRejected);
+      expect(WriteFailure(WriteKind.voidSale, 'x').message, errVoidSaleRejected);
+      expect(WriteFailure(WriteKind.adjustment, 'x').message, errAdjustRejected);
       expect(WriteFailure(WriteKind.other, 'x').message, errWriteRejected);
     });
   });

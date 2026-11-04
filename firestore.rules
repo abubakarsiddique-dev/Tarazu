@@ -139,8 +139,10 @@ service cloud.firestore {
 
       // Per-material stock (maintained with FieldValue.increment by the app).
       // weightGrams may go negative on purpose: that means the books are wrong
-      // (e.g. a slip was voided after the stock was sold) and should stay
-      // visible instead of the whole void being rejected. Revisit in Phase 2.
+      // (e.g. a purchase was cancelled after its stock was already sold) and it
+      // should stay visible (the Stock screen shows a warning) instead of the
+      // whole cancel being rejected. The app itself never lets a sale or a
+      // manual removal take stock below zero.
       function validStock() {
         return request.resource.data.weightGrams is int
           && request.resource.data.materialName is string
@@ -160,6 +162,78 @@ service cloud.firestore {
           && validStock();
 
         allow delete: if false;
+      }
+
+      // Sales to a bigger dealer / factory (1..30 items)
+      match /sales/{saleId} {
+        allow read: if isShopOwner(shopId);
+
+        allow create: if isShopOwner(shopId)
+          && request.resource.data.keys().hasOnly(
+               ['items','totalAmount','totalWeightGrams','buyerName','dayKey',
+                'createdAt','createdBy','isVoided'])
+          && request.resource.data.items is list
+          && request.resource.data.items.size() >= 1
+          && request.resource.data.items.size() <= 30
+          && request.resource.data.totalAmount is int
+          && request.resource.data.totalAmount >= 0
+          && request.resource.data.totalWeightGrams is int
+          && request.resource.data.totalWeightGrams > 0
+          && request.resource.data.buyerName is string
+          && request.resource.data.buyerName.size() <= 60
+          && request.resource.data.createdAt is timestamp
+          && request.resource.data.createdBy == request.auth.uid
+          && request.resource.data.isVoided == false;
+
+        // Same single transition as purchases: not voided -> voided.
+        allow update: if isShopOwner(shopId)
+          && resource.data.isVoided == false
+          && request.resource.data.isVoided == true
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isVoided','voidedAt']);
+
+        allow delete: if false;
+      }
+
+      // Per-day SALES totals (same shape and checks as `daily`).
+      match /salesDaily/{dayKey} {
+        allow read: if isShopOwner(shopId);
+
+        allow create: if isShopOwner(shopId)
+          && request.resource.data.keys().hasOnly(['totalAmount','totalWeightGrams','entryCount'])
+          && validDaily();
+
+        allow update: if isShopOwner(shopId)
+          && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(['totalAmount','totalWeightGrams','entryCount'])
+          && validDaily();
+
+        allow delete: if false;
+      }
+
+      // Manual stock changes. Create-only: a record can never be edited or
+      // deleted. To undo one, make another adjustment.
+      match /adjustments/{adjustmentId} {
+        allow read: if isShopOwner(shopId);
+
+        allow create: if isShopOwner(shopId)
+          && request.resource.data.keys().hasOnly(
+               ['materialId','materialName','deltaGrams','reason','note','dayKey',
+                'createdAt','createdBy'])
+          && request.resource.data.materialId is string
+          && request.resource.data.materialName is string
+          && request.resource.data.materialName.size() > 0
+          && request.resource.data.materialName.size() <= 60
+          && request.resource.data.deltaGrams is int
+          && request.resource.data.deltaGrams != 0
+          && request.resource.data.deltaGrams >= -100000000
+          && request.resource.data.deltaGrams <= 100000000
+          && request.resource.data.reason in ['correction','loss','other']
+          && request.resource.data.note is string
+          && request.resource.data.note.size() <= 200
+          && request.resource.data.createdAt is timestamp
+          && request.resource.data.createdBy == request.auth.uid;
+
+        allow update, delete: if false;
       }
     }
   }

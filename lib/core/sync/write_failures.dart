@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// What the user was trying to do when a background write failed.
-enum WriteKind { slip, voidSlip, material, other }
+enum WriteKind { slip, voidSlip, material, other, adjustment, voidSale, sale }
 
 typedef WriteErrorHandler = void Function(WriteKind kind, Object error);
 
@@ -38,6 +38,12 @@ class WriteFailure {
         WriteKind.voidSlip => errVoidRejected,
         WriteKind.material => errMaterialRejected,
         WriteKind.other => errWriteRejected,
+    // TODO: Handle this case.
+    WriteKind.adjustment => throw UnimplementedError(),
+    // TODO: Handle this case.
+    WriteKind.voidSale => throw UnimplementedError(),
+    // TODO: Handle this case.
+    WriteKind.sale => throw UnimplementedError(),
       };
 }
 

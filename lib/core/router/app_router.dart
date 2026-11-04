@@ -11,6 +11,8 @@ import '../../features/home/presentation/home_screen.dart';
 import '../../features/inventory/presentation/add_purchase_screen.dart';
 import '../../features/inventory/presentation/history_screen.dart';
 import '../../features/inventory/presentation/materials_screen.dart';
+import '../../features/inventory/presentation/new_sale_screen.dart';
+import '../../features/inventory/presentation/sales_screen.dart';
 import '../../features/inventory/presentation/stock_screen.dart';
 import '../../features/onboarding/presentation/onboarding_screen.dart';
 import '../../features/splash/presentation/splash_screen.dart';
@@ -29,6 +31,8 @@ class Routes {
   static const materials = '/materials';
   static const stock = '/stock';
   static const history = '/history';
+  static const newSale = '/sales/new';
+  static const sales = '/sales';
   static const disabled = '/disabled';
   static const profileMissing = '/profile-missing';
 }
@@ -78,6 +82,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: Routes.materials, builder: (_, _) => const MaterialsScreen()),
       GoRoute(path: Routes.stock, builder: (_, _) => const StockScreen()),
       GoRoute(path: Routes.history, builder: (_, _) => const HistoryScreen()),
+      GoRoute(path: Routes.newSale, builder: (_, _) => const NewSaleScreen()),
+      GoRoute(path: Routes.sales, builder: (_, _) => const SalesScreen()),
       GoRoute(
         path: Routes.disabled,
         builder: (_, _) => const AccountBlockedScreen(
