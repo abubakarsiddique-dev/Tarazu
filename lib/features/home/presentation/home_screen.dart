@@ -5,7 +5,9 @@ import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_strings.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/utils/format.dart';
+import '../../../core/utils/validators.dart';
 import '../../auth/application/auth_providers.dart';
+import '../../auth/domain/app_user.dart';
 import '../../inventory/application/inventory_providers.dart';
 import '../../inventory/domain/models.dart';
 import '../../inventory/presentation/slip_sheet.dart';
@@ -32,6 +34,16 @@ class HomeScreen extends ConsumerWidget {
     if (ok == true) ref.read(inventoryActionsProvider).voidPurchase(p);
   }
 
+  /// Lets the owner set the phone number that is printed on shared slips.
+  Future<void> _editShopDetails(BuildContext context, WidgetRef ref, AppUser user) async {
+    final result = await showDialog<String>(
+      context: context,
+      builder: (_) => _ShopDetailsDialog(initialPhone: user.phone),
+    );
+    if (result == null) return;
+    ref.read(authRepositoryProvider).updatePhone(user.uid, result);
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
@@ -44,6 +56,11 @@ class HomeScreen extends ConsumerWidget {
       appBar: AppBar(
         title: Text(user?.shopName ?? AppStrings.appName),
         actions: [
+          IconButton(
+            tooltip: AppStrings.shopDetails,
+            icon: const Icon(Icons.storefront_outlined),
+            onPressed: user == null ? null : () => _editShopDetails(context, ref, user),
+          ),
           IconButton(
             tooltip: AppStrings.logout,
             icon: const Icon(Icons.logout),
@@ -148,7 +165,13 @@ class HomeScreen extends ConsumerWidget {
                             ),
                           ],
                         ),
-                        onTap: () => showSlipSheet(context, p, onVoid: () => _confirmVoid(context, ref, p)),
+                        onTap: () => showSlipSheet(
+                          context,
+                          p,
+                          onVoid: () => _confirmVoid(context, ref, p),
+                          shopName: user?.shopName ?? '',
+                          shopPhone: user?.phone ?? '',
+                        ),
                         onLongPress: () => _confirmVoid(context, ref, p),
                       ),
                     ),
@@ -158,6 +181,72 @@ class HomeScreen extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _ShopDetailsDialog extends StatefulWidget {
+  const _ShopDetailsDialog({required this.initialPhone});
+
+  final String initialPhone;
+
+  @override
+  State<_ShopDetailsDialog> createState() => _ShopDetailsDialogState();
+}
+
+class _ShopDetailsDialogState extends State<_ShopDetailsDialog> {
+  final _formKey = GlobalKey<FormState>();
+  late final TextEditingController _phone;
+
+  @override
+  void initState() {
+    super.initState();
+    _phone = TextEditingController(text: widget.initialPhone);
+  }
+
+  @override
+  void dispose() {
+    _phone.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    if (!_formKey.currentState!.validate()) return;
+    Navigator.of(context).pop(_phone.text.trim());
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text(AppStrings.shopDetails),
+      content: Form(
+        key: _formKey,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            TextFormField(
+              controller: _phone,
+              autofocus: true,
+              keyboardType: TextInputType.phone,
+              decoration: const InputDecoration(labelText: AppStrings.shopPhone),
+              validator: Validators.phoneOptional,
+            ),
+            const Padding(
+              padding: EdgeInsets.only(top: 8),
+              child: Text(AppStrings.phoneShownOnSlip, style: TextStyle(fontSize: 12)),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text(AppStrings.cancel)),
+        FilledButton(
+          style: FilledButton.styleFrom(minimumSize: const Size(96, 44)),
+          onPressed: _submit,
+          child: const Text(AppStrings.save),
+        ),
+      ],
     );
   }
 }

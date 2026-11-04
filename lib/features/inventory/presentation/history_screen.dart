@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/app_strings.dart';
 import '../../../core/utils/format.dart';
+import '../../auth/application/auth_providers.dart';
 import '../application/inventory_providers.dart';
 import '../domain/history.dart';
 import '../domain/models.dart';
@@ -72,6 +73,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
       to: dayKey(periodEnd(_period, _start)),
     );
     final data = ref.watch(purchasesRangeProvider(range));
+    final user = ref.watch(userProfileProvider).value;
 
     return Scaffold(
       appBar: AppBar(title: const Text(AppStrings.history)),
@@ -144,6 +146,8 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
               summary: summarizeHistory(purchases, materialId: _materialId),
               period: _period,
               onOpenDay: _openDay,
+              shopName: user?.shopName ?? '',
+              shopPhone: user?.phone ?? '',
             ),
           ),
         ],
@@ -153,11 +157,19 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
 }
 
 class _Body extends StatelessWidget {
-  const _Body({required this.summary, required this.period, required this.onOpenDay});
+  const _Body({
+    required this.summary,
+    required this.period,
+    required this.onOpenDay,
+    required this.shopName,
+    required this.shopPhone,
+  });
 
   final HistorySummary summary;
   final HistoryPeriod period;
   final void Function(String dayKey) onOpenDay;
+  final String shopName;
+  final String shopPhone;
 
   @override
   Widget build(BuildContext context) {
@@ -247,7 +259,12 @@ class _Body extends StatelessWidget {
                     style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
                   ),
                   // No cancel button here: old slips can't be cancelled (yet).
-                  onTap: () => showSlipSheet(context, p),
+                  onTap: () => showSlipSheet(
+                    context,
+                    p,
+                    shopName: shopName,
+                    shopPhone: shopPhone,
+                  ),
                 ),
               ),
           ],

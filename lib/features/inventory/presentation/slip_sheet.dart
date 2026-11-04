@@ -1,12 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../../core/constants/app_strings.dart';
 import '../../../core/utils/format.dart';
 import '../domain/models.dart';
+import '../domain/slip_text.dart';
 
-/// The slip, like a printed receipt. Shows the cancel button only when
+/// The slip, like a printed receipt, with a Share button (opens the phone's
+/// share sheet, pick WhatsApp there). The cancel button shows only when
 /// [onVoid] is given (Home passes it, History does not).
-void showSlipSheet(BuildContext context, Purchase p, {VoidCallback? onVoid}) {
+void showSlipSheet(
+  BuildContext context,
+  Purchase p, {
+  VoidCallback? onVoid,
+  String shopName = '',
+  String shopPhone = '',
+}) {
   final theme = Theme.of(context);
   showModalBottomSheet<void>(
     context: context,
@@ -51,6 +60,15 @@ void showSlipSheet(BuildContext context, Purchase p, {VoidCallback? onVoid}) {
               ],
             ),
             const SizedBox(height: 16),
+            OutlinedButton.icon(
+              onPressed: () => SharePlus.instance.share(
+                ShareParams(text: slipShareText(p, shopName: shopName, shopPhone: shopPhone)),
+              ),
+              icon: const Icon(Icons.share),
+              label: const Text(AppStrings.shareSlip),
+              style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+            ),
+            const SizedBox(height: 8),
             Row(
               children: [
                 if (onVoid != null) ...[

@@ -20,10 +20,12 @@ service cloud.firestore {
       allow create: if signedIn()
         && request.auth.uid == uid
         && request.resource.data.keys().hasOnly(
-             ['uid','ownerName','shopName','email','role','shopId','isActive','createdAt'])
+             ['uid','ownerName','shopName','phone','email','role','shopId','isActive','createdAt'])
         && request.resource.data.keys().hasAll(
              ['uid','ownerName','shopName','email','role','shopId','isActive','createdAt'])
         && request.resource.data.uid == uid
+        && (!('phone' in request.resource.data)
+            || (request.resource.data.phone is string && request.resource.data.phone.size() <= 20))
         && request.resource.data.role == 'owner'
         && request.resource.data.isActive == true
         && request.resource.data.shopId is string
@@ -31,7 +33,9 @@ service cloud.firestore {
 
       allow update: if signedIn()
         && request.auth.uid == uid
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['ownerName']);
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['ownerName','phone'])
+        && (!('phone' in request.resource.data)
+            || (request.resource.data.phone is string && request.resource.data.phone.size() <= 20));
 
       allow delete: if false;
     }

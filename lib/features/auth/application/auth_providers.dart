@@ -55,6 +55,7 @@ class AuthController extends AsyncNotifier<void> {
   Future<void> register({
     required String ownerName,
     required String shopName,
+    String phone = '',
     required String email,
     required String password,
   }) async {
@@ -64,6 +65,7 @@ class AuthController extends AsyncNotifier<void> {
       state = await AsyncValue.guard(() => _repo.register(
             ownerName: ownerName,
             shopName: shopName,
+            phone: phone,
             email: email,
             password: password,
           ));

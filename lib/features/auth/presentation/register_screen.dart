@@ -19,6 +19,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
   final _ownerName = TextEditingController();
   final _shopName = TextEditingController();
+  final _phone = TextEditingController();
   final _email = TextEditingController();
   final _password = TextEditingController();
   final _confirm = TextEditingController();
@@ -28,6 +29,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   void dispose() {
     _ownerName.dispose();
     _shopName.dispose();
+    _phone.dispose();
     _email.dispose();
     _password.dispose();
     _confirm.dispose();
@@ -40,6 +42,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     await ref.read(authControllerProvider.notifier).register(
           ownerName: _ownerName.text,
           shopName: _shopName.text,
+          phone: _phone.text,
           email: _email.text,
           password: _password.text,
         );
@@ -80,6 +83,14 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   textInputAction: TextInputAction.next,
                   decoration: const InputDecoration(labelText: AppStrings.shopName),
                   validator: Validators.requiredField,
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _phone,
+                  keyboardType: TextInputType.phone,
+                  textInputAction: TextInputAction.next,
+                  decoration: const InputDecoration(labelText: AppStrings.shopPhoneOptional),
+                  validator: Validators.phoneOptional,
                 ),
                 const SizedBox(height: 16),
                 TextFormField(

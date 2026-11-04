@@ -20,6 +20,7 @@ class AppUser {
     required this.role,
     required this.shopId,
     required this.isActive,
+    this.phone = '',
     this.createdAt,
   });
 
@@ -30,6 +31,9 @@ class AppUser {
   final UserRole role;
   final String shopId;
   final bool isActive;
+
+  /// Shop phone number printed on shared slips. Optional, may be empty.
+  final String phone;
   final DateTime? createdAt;
 
   factory AppUser.fromMap(String uid, Map<String, dynamic> m) => AppUser(
@@ -41,6 +45,7 @@ class AppUser {
         shopId: m['shopId'] as String? ?? '',
         // Missing flag = treated as inactive (fail closed).
         isActive: m['isActive'] as bool? ?? false,
+        phone: m['phone'] as String? ?? '',
         createdAt: (m['createdAt'] as Timestamp?)?.toDate(),
       );
 }

@@ -23,3 +23,13 @@ Manual test checklist: register, logout, login, wrong password, forgot password,
 airplane mode while logged in then relaunch (must open home), airplane mode
 login attempt (must show the internet message), set isActive=false in console
 (must show disabled screen).
+
+## Share slip + app icon (run once after pulling)
+
+    flutter pub add share_plus
+    flutter pub add --dev flutter_launcher_icons
+    dart run flutter_launcher_icons
+    flutter clean && flutter run
+
+Publish the updated firestore.rules in the Firebase console (adds the optional
+`phone` field on users/{uid}). Icon source art: assets/icon/app_icon.svg.

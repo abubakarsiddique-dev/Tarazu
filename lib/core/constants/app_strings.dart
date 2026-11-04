@@ -109,6 +109,16 @@ class AppStrings {
   static const seller = 'Seller';
   static const close = 'Close';
 
+  // Shop details / sharing
+  static const shopPhone = 'Shop phone number';
+  static const shopPhoneOptional = 'Shop phone number (optional)';
+  static const phoneInvalid = 'Enter a valid phone number';
+  static const shopDetails = 'Shop details';
+  static const shareSlip = 'Share (WhatsApp)';
+  static const phoneShownOnSlip = 'This number is printed on shared slips.';
+  static const tel = 'Tel';
+  static const date = 'Date';
+
   // History
   static const history = 'History';
   static const periodDay = 'Day';

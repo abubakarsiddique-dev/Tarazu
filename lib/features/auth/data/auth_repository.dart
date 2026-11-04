@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 
 import '../domain/app_user.dart';
 
@@ -29,6 +30,7 @@ class AuthRepository {
   Future<void> register({
     required String ownerName,
     required String shopName,
+    String phone = '',
     required String email,
     required String password,
   }) async {
@@ -53,6 +55,7 @@ class AuthRepository {
           'uid': user.uid,
           'ownerName': ownerName.trim(),
           'shopName': shopName.trim(),
+          'phone': phone.trim(),
           'email': email.trim().toLowerCase(),
           'role': UserRole.owner.name,
           'shopId': shopRef.id,
@@ -72,6 +75,14 @@ class AuthRepository {
       await _rollbackUser(user);
       rethrow;
     }
+  }
+
+  /// Offline-first: the write is not awaited (it completes only when the server
+  /// confirms). The local cache updates at once and syncs later.
+  void updatePhone(String uid, String phone) {
+    _db.collection('users').doc(uid).update({'phone': phone.trim()}).catchError((Object e) {
+      debugPrint('Phone update failed: $e');
+    });
   }
 
   Future<void> sendPasswordReset(String email) =>
