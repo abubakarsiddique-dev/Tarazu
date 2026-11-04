@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "147408166498",
+    "project_id": "tarazu-80b05",
+    "storage_bucket": "tarazu-80b05.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:147408166498:android:768ad38ff232e853627b3b",
+        "android_client_info": {
+          "package_name": "com.abubakar.tarazu"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDkgYp22H98xPfecGA67CB8wg-Vh88b3dI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:147408166498:android:4a375c0e170cbb45627b3b",
+        "android_client_info": {
+          "package_name": "com.example.tarazu"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDkgYp22H98xPfecGA67CB8wg-Vh88b3dI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

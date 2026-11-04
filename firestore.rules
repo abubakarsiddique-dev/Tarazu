@@ -1,0 +1,111 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    // True when the signed-in user owns this shop. Costs one extra document read
+    // per request (cached within a request), negligible at this scale.
+    function isShopOwner(shopId) {
+      return signedIn()
+        && get(/databases/$(database)/documents/shops/$(shopId)).data.ownerUid == request.auth.uid;
+    }
+
+    // users/{uid}: one document per account
+    match /users/{uid} {
+      allow read: if signedIn() && request.auth.uid == uid;
+
+      allow create: if signedIn()
+        && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(
+             ['uid','ownerName','shopName','email','role','shopId','isActive','createdAt'])
+        && request.resource.data.keys().hasAll(
+             ['uid','ownerName','shopName','email','role','shopId','isActive','createdAt'])
+        && request.resource.data.uid == uid
+        && request.resource.data.role == 'owner'
+        && request.resource.data.isActive == true
+        && request.resource.data.shopId is string
+        && getAfter(/databases/$(database)/documents/shops/$(request.resource.data.shopId)).data.ownerUid == uid;
+
+      allow update: if signedIn()
+        && request.auth.uid == uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['ownerName']);
+
+      allow delete: if false;
+    }
+
+    // shops/{shopId} and everything inside it
+    match /shops/{shopId} {
+      allow read: if signedIn() && resource.data.ownerUid == request.auth.uid;
+
+      allow create: if signedIn()
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.keys().hasOnly(['ownerUid','name','createdAt']);
+
+      allow update: if signedIn()
+        && resource.data.ownerUid == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name']);
+
+      allow delete: if false;
+
+      // Materials the shop buys (iron, plastic, ...)
+      match /materials/{materialId} {
+        allow read: if isShopOwner(shopId);
+
+        allow create: if isShopOwner(shopId)
+          && request.resource.data.keys().hasOnly(['name','rate','priceUnit','isActive','createdAt'])
+          && request.resource.data.name is string
+          && request.resource.data.name.size() > 0
+          && request.resource.data.name.size() <= 60
+          && request.resource.data.rate is number
+          && request.resource.data.rate >= 0
+          && request.resource.data.priceUnit in ['kg','pakaSeer']
+          && request.resource.data.isActive is bool;
+
+        allow update: if isShopOwner(shopId)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name','rate','priceUnit','isActive'])
+          && (!('priceUnit' in request.resource.data) || request.resource.data.priceUnit in ['kg','pakaSeer']);
+
+        allow delete: if false; // deactivate instead, history keeps its name
+      }
+
+      // Purchase slips (one customer, 1..30 items)
+      match /purchases/{purchaseId} {
+        allow read: if isShopOwner(shopId);
+
+        allow create: if isShopOwner(shopId)
+          && request.resource.data.keys().hasOnly(
+               ['items','totalAmount','totalWeightGrams','sellerName','dayKey',
+                'createdAt','createdBy','isVoided'])
+          && request.resource.data.items is list
+          && request.resource.data.items.size() >= 1
+          && request.resource.data.items.size() <= 30
+          && request.resource.data.totalAmount is int
+          && request.resource.data.totalAmount >= 0
+          && request.resource.data.totalWeightGrams is int
+          && request.resource.data.totalWeightGrams > 0
+          && request.resource.data.createdAt is timestamp
+          && request.resource.data.createdBy == request.auth.uid
+          && request.resource.data.isVoided == false;
+
+        // Only one transition is allowed: not voided -> voided. No edits, no un-void.
+        allow update: if isShopOwner(shopId)
+          && resource.data.isVoided == false
+          && request.resource.data.isVoided == true
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isVoided','voidedAt']);
+
+        allow delete: if false;
+      }
+
+      // Per-day totals and per-material stock (maintained with increments)
+      match /daily/{dayKey} {
+        allow read, write: if isShopOwner(shopId);
+      }
+      match /stock/{materialId} {
+        allow read, write: if isShopOwner(shopId);
+      }
+    }
+  }
+}
