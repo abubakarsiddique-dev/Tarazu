@@ -31,6 +31,9 @@ service cloud.firestore {
         && request.resource.data.shopId is string
         && getAfter(/databases/$(database)/documents/shops/$(request.resource.data.shopId)).data.ownerUid == uid;
 
+      // ONE update rule. (There used to be two; Firestore ORs rules together, so
+      // the stricter copy did nothing.) Because affectedKeys is limited to
+      // ownerName and phone, role / isActive / shopId can never change here.
       allow update: if signedIn()
         && request.auth.uid == uid
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['ownerName','phone'])
@@ -108,12 +111,55 @@ service cloud.firestore {
         allow delete: if false;
       }
 
-      // Per-day totals and per-material stock (maintained with increments)
+      // Per-day totals (maintained with FieldValue.increment by the app).
+      // Rules see the value AFTER the increment, so these checks hold the result:
+      // a day can never end up with a negative total or a negative entry count.
+      function validDaily() {
+        return request.resource.data.totalAmount is int
+          && request.resource.data.totalAmount >= 0
+          && request.resource.data.totalWeightGrams is int
+          && request.resource.data.totalWeightGrams >= 0
+          && request.resource.data.entryCount is int
+          && request.resource.data.entryCount >= 0;
+      }
       match /daily/{dayKey} {
-        allow read, write: if isShopOwner(shopId);
+        allow read: if isShopOwner(shopId);
+
+        allow create: if isShopOwner(shopId)
+          && request.resource.data.keys().hasOnly(['totalAmount','totalWeightGrams','entryCount'])
+          && validDaily();
+
+        allow update: if isShopOwner(shopId)
+          && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(['totalAmount','totalWeightGrams','entryCount'])
+          && validDaily();
+
+        allow delete: if false;
+      }
+
+      // Per-material stock (maintained with FieldValue.increment by the app).
+      // weightGrams may go negative on purpose: that means the books are wrong
+      // (e.g. a slip was voided after the stock was sold) and should stay
+      // visible instead of the whole void being rejected. Revisit in Phase 2.
+      function validStock() {
+        return request.resource.data.weightGrams is int
+          && request.resource.data.materialName is string
+          && request.resource.data.materialName.size() > 0
+          && request.resource.data.materialName.size() <= 60;
       }
       match /stock/{materialId} {
-        allow read, write: if isShopOwner(shopId);
+        allow read: if isShopOwner(shopId);
+
+        allow create: if isShopOwner(shopId)
+          && request.resource.data.keys().hasOnly(['materialName','weightGrams'])
+          && validStock();
+
+        allow update: if isShopOwner(shopId)
+          && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(['materialName','weightGrams'])
+          && validStock();
+
+        allow delete: if false;
       }
     }
   }

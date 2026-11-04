@@ -1,27 +1,27 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/foundation.dart';
 
+import '../../../core/sync/write_failures.dart';
 import '../domain/models.dart';
 
 /// Offline-first rules used here:
 ///  * Writes are NOT awaited. Firestore's future only completes when the SERVER
 ///    confirms, which never happens without internet. The local cache updates
 ///    immediately and all listeners fire, so the UI is instant.
+///  * If the server later REJECTS a write, [onWriteError] is called so the user
+///    is told (see core/sync/write_failures.dart). Never swallow it.
 ///  * Totals and stock are kept with FieldValue.increment inside the same batch
 ///    as the slip. Increments work offline and merge correctly on sync.
 class InventoryRepository {
-  InventoryRepository(this._db);
+  InventoryRepository(this._db, {WriteErrorHandler? onWriteError})
+      : _onWriteError = onWriteError;
 
   final FirebaseFirestore _db;
+  final WriteErrorHandler? _onWriteError;
 
   DocumentReference<Map<String, dynamic>> _shop(String shopId) =>
       _db.collection('shops').doc(shopId);
 
-  void _send(Future<void> write) {
-    write.catchError((Object e, StackTrace s) {
-      debugPrint('Firestore write failed: $e');
-    });
-  }
+  void _send(Future<void> write, WriteKind kind) => sendWrite(write, kind, _onWriteError);
 
   // ---------- reads ----------
 
@@ -88,16 +88,19 @@ class InventoryRepository {
     double ratePakaSeer,
     PriceUnit unit,
   ) {
-    _send(_shop(shopId).collection('materials').doc().set({
-      'name': name.trim(),
-      'rateKg': rateKg,
-      'ratePakaSeer': ratePakaSeer,
-      // `rate` = rate of the default unit (kept for older app versions).
-      'rate': unit == PriceUnit.pakaSeer ? ratePakaSeer : rateKg,
-      'priceUnit': unit.name,
-      'isActive': true,
-      'createdAt': Timestamp.now(),
-    }));
+    _send(
+      _shop(shopId).collection('materials').doc().set({
+        'name': name.trim(),
+        'rateKg': rateKg,
+        'ratePakaSeer': ratePakaSeer,
+        // `rate` = rate of the default unit (kept for older app versions).
+        'rate': unit == PriceUnit.pakaSeer ? ratePakaSeer : rateKg,
+        'priceUnit': unit.name,
+        'isActive': true,
+        'createdAt': Timestamp.now(),
+      }),
+      WriteKind.material,
+    );
   }
 
   void updateMaterial(
@@ -120,7 +123,10 @@ class InventoryRepository {
       data['rate'] = priceUnit == PriceUnit.pakaSeer ? ratePakaSeer : rateKg;
     }
     if (data.isEmpty) return;
-    _send(_shop(shopId).collection('materials').doc(id).update(data));
+    _send(
+      _shop(shopId).collection('materials').doc(id).update(data),
+      WriteKind.material,
+    );
   }
 
   void seedMaterials(String shopId, List<String> names) {
@@ -136,7 +142,7 @@ class InventoryRepository {
         'createdAt': Timestamp.now(),
       });
     }
-    _send(batch.commit());
+    _send(batch.commit(), WriteKind.material);
   }
 
   // ---------- slips ----------
@@ -193,7 +199,7 @@ class InventoryRepository {
         SetOptions(merge: true),
       );
     });
-    _send(batch.commit());
+    _send(batch.commit(), WriteKind.slip);
   }
 
   /// Cancelling keeps the record (audit trail) and reverses totals and stock.
@@ -220,6 +226,6 @@ class InventoryRepository {
         SetOptions(merge: true),
       );
     });
-    _send(batch.commit());
+    _send(batch.commit(), WriteKind.voidSlip);
   }
 }

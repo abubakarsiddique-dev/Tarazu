@@ -1,11 +1,16 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/sync/write_failures.dart';
 import '../../auth/application/auth_providers.dart';
 import '../data/inventory_repository.dart';
 import '../domain/models.dart';
 
 final inventoryRepositoryProvider = Provider<InventoryRepository>(
-  (ref) => InventoryRepository(ref.watch(firestoreProvider)),
+  (ref) => InventoryRepository(
+    ref.watch(firestoreProvider),
+    // Tell the user when the server rejects a write that looked saved.
+    onWriteError: ref.read(writeFailureProvider.notifier).report,
+  ),
 );
 
 /// The signed-in owner's shop. Null only while signed out.
@@ -34,7 +39,7 @@ final purchasesRangeProvider =
   return ref.watch(inventoryRepositoryProvider).watchPurchasesRange(shopId, range.from, range.to);
 });
 
-final dailySummaryProvider =StreamProvider.family<DailySummary, String>((ref, day) {
+final dailySummaryProvider = StreamProvider.family<DailySummary, String>((ref, day) {
   final shopId = ref.watch(shopIdProvider);
   if (shopId == null) return Stream.value(const DailySummary.empty());
   return ref.watch(inventoryRepositoryProvider).watchDaily(shopId, day);
