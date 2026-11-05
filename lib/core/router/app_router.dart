@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:tarazu/features/staff/presentation/staff_screen.dart';
 
 import '../../features/auth/presentation/account_blocked_screen.dart';
 import '../../features/auth/presentation/forgot_password_screen.dart';
@@ -41,6 +42,7 @@ class Routes {
   static const report = '/report';
   static const profit = '/profit';
    static const expenses = '/expenses';
+   static const staff = '/staff';
 
 }
 
@@ -93,6 +95,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: Routes.sales, builder: (_, _) => const SalesScreen()),
       GoRoute(path: Routes.report, builder: (_, _) => const ReportScreen()),
       GoRoute(path: Routes.profit, builder: (_, _) => const ProfitScreen()),
+      GoRoute(path: Routes.staff, builder: (_, _) => const StaffScreen()),
       GoRoute(path: Routes.expenses, builder: (_, _) => const ExpensesScreen()),
       GoRoute(
         path: Routes.disabled,

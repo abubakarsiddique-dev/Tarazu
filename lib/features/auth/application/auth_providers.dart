@@ -2,7 +2,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
 import '../data/auth_repository.dart';
 import '../domain/app_user.dart';
 
@@ -88,3 +87,15 @@ class AuthController extends AsyncNotifier<void> {
 
 final authControllerProvider =
     AsyncNotifierProvider<AuthController, void>(AuthController.new);
+
+
+/// True sirf owner ke liye. Munshi ke liye false. Profile load hone tak false.
+final isOwnerProvider = Provider<bool>((ref) {
+  final user = ref.watch(userProfileProvider).value;
+  return user != null && user.role == UserRole.owner;
+});
+
+// final isOwnerProvider = Provider<bool>((ref) {
+//   final user = ref.watch(userProfileProvider).value;
+//   return user != null && user.role == UserRole.owner;
+// });

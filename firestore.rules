@@ -6,17 +6,34 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // True when the signed-in user owns this shop. Costs one extra document read
-    // per request (cached within a request), negligible at this scale.
+    // True when the signed-in user owns this shop.
     function isShopOwner(shopId) {
       return signedIn()
         && get(/databases/$(database)/documents/shops/$(shopId)).data.ownerUid == request.auth.uid;
     }
 
-    // users/{uid}: one document per account
-    match /users/{uid} {
-      allow read: if signedIn() && request.auth.uid == uid;
+    // True when the signed-in user is an ACTIVE munshi (staff) of this shop.
+    // Disabling a munshi (users/{uid}.isActive = false) cuts access immediately.
+    function isStaffOf(shopId) {
+      return signedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'staff'
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.shopId == shopId
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isActive == true;
+    }
 
+    function isMember(shopId) {
+      return isShopOwner(shopId) || isStaffOf(shopId);
+    }
+
+    // users/{uid}: one document per account (owner or munshi)
+    match /users/{uid} {
+      // Everyone reads their own profile. The owner can also read the profiles
+      // of their munshis (query: where shopId == X).
+      allow read: if signedIn()
+        && (request.auth.uid == uid || isShopOwner(resource.data.shopId));
+
+      // Owner registers themselves.
       allow create: if signedIn()
         && request.auth.uid == uid
         && request.resource.data.keys().hasOnly(
@@ -31,14 +48,39 @@ service cloud.firestore {
         && request.resource.data.shopId is string
         && getAfter(/databases/$(database)/documents/shops/$(request.resource.data.shopId)).data.ownerUid == uid;
 
-      // ONE update rule. (There used to be two; Firestore ORs rules together, so
-      // the stricter copy did nothing.) Because affectedKeys is limited to
-      // ownerName and phone, role / isActive / shopId can never change here.
+      // Owner creates a munshi profile for ANOTHER uid (the auth account was
+      // just created by the app). role is forced to 'staff'.
+      allow create: if signedIn()
+        && request.auth.uid != uid
+        && request.resource.data.keys().hasOnly(
+             ['uid','ownerName','shopName','phone','email','role','shopId','isActive','createdAt'])
+        && request.resource.data.keys().hasAll(
+             ['uid','ownerName','shopName','email','role','shopId','isActive','createdAt'])
+        && request.resource.data.uid == uid
+        && request.resource.data.role == 'staff'
+        && request.resource.data.isActive == true
+        && request.resource.data.shopId is string
+        && request.resource.data.ownerName is string
+        && request.resource.data.ownerName.size() > 0
+        && request.resource.data.ownerName.size() <= 60
+        && (!('phone' in request.resource.data)
+            || (request.resource.data.phone is string && request.resource.data.phone.size() <= 20))
+        && isShopOwner(request.resource.data.shopId);
+
+      // 1) A user edits their own name / phone only. role / isActive / shopId can never change here.
       allow update: if signedIn()
         && request.auth.uid == uid
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['ownerName','phone'])
         && (!('phone' in request.resource.data)
             || (request.resource.data.phone is string && request.resource.data.phone.size() <= 20));
+
+      // 2) The owner can switch a munshi on / off (isActive) and nothing else.
+      allow update: if signedIn()
+        && request.auth.uid != uid
+        && resource.data.role == 'staff'
+        && isShopOwner(resource.data.shopId)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isActive'])
+        && request.resource.data.isActive is bool;
 
       allow delete: if false;
     }
@@ -57,9 +99,9 @@ service cloud.firestore {
 
       allow delete: if false;
 
-      // Materials the shop buys (iron, plastic, ...)
+      // Materials: everybody in the shop reads, only the OWNER edits rates.
       match /materials/{materialId} {
-        allow read: if isShopOwner(shopId);
+        allow read: if isMember(shopId);
 
         allow create: if isShopOwner(shopId)
           && request.resource.data.keys().hasOnly(
@@ -80,14 +122,14 @@ service cloud.firestore {
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name','rate','rateKg','ratePakaSeer','priceUnit','isActive'])
           && (!('priceUnit' in request.resource.data) || request.resource.data.priceUnit in ['kg','pakaSeer']);
 
-        allow delete: if false; // deactivate instead, history keeps its name
+        allow delete: if false;
       }
 
-      // Purchase slips (one customer, 1..30 items)
+      // Purchase slips: owner AND munshi can create. Only the OWNER can cancel (void).
       match /purchases/{purchaseId} {
-        allow read: if isShopOwner(shopId);
+        allow read: if isMember(shopId);
 
-        allow create: if isShopOwner(shopId)
+        allow create: if isMember(shopId)
           && request.resource.data.keys().hasOnly(
                ['items','totalAmount','totalWeightGrams','sellerName','dayKey',
                 'createdAt','createdBy','isVoided'])
@@ -102,7 +144,6 @@ service cloud.firestore {
           && request.resource.data.createdBy == request.auth.uid
           && request.resource.data.isVoided == false;
 
-        // Only one transition is allowed: not voided -> voided. No edits, no un-void.
         allow update: if isShopOwner(shopId)
           && resource.data.isVoided == false
           && request.resource.data.isVoided == true
@@ -112,8 +153,6 @@ service cloud.firestore {
       }
 
       // Per-day totals (maintained with FieldValue.increment by the app).
-      // Rules see the value AFTER the increment, so these checks hold the result:
-      // a day can never end up with a negative total or a negative entry count.
       function validDaily() {
         return request.resource.data.totalAmount is int
           && request.resource.data.totalAmount >= 0
@@ -123,13 +162,13 @@ service cloud.firestore {
           && request.resource.data.entryCount >= 0;
       }
       match /daily/{dayKey} {
-        allow read: if isShopOwner(shopId);
+        allow read: if isMember(shopId);
 
-        allow create: if isShopOwner(shopId)
+        allow create: if isMember(shopId)
           && request.resource.data.keys().hasOnly(['totalAmount','totalWeightGrams','entryCount'])
           && validDaily();
 
-        allow update: if isShopOwner(shopId)
+        allow update: if isMember(shopId)
           && request.resource.data.diff(resource.data).affectedKeys()
                .hasOnly(['totalAmount','totalWeightGrams','entryCount'])
           && validDaily();
@@ -137,12 +176,9 @@ service cloud.firestore {
         allow delete: if false;
       }
 
-      // Per-material stock (maintained with FieldValue.increment by the app).
-      // weightGrams may go negative on purpose: that means the books are wrong
-      // (e.g. a purchase was cancelled after its stock was already sold) and it
-      // should stay visible (the Stock screen shows a warning) instead of the
-      // whole cancel being rejected. The app itself never lets a sale or a
-      // manual removal take stock below zero.
+      // Per-material stock. weightGrams may go negative on purpose (see Stock screen warning).
+      // NOTE: rules cannot tell an increment from an overwrite, so a munshi who writes
+      // directly (not through the app) could set a wrong stock figure. See CHANGES_PHASE5.md.
       function validStock() {
         return request.resource.data.weightGrams is int
           && request.resource.data.materialName is string
@@ -150,13 +186,13 @@ service cloud.firestore {
           && request.resource.data.materialName.size() <= 60;
       }
       match /stock/{materialId} {
-        allow read: if isShopOwner(shopId);
+        allow read: if isMember(shopId);
 
-        allow create: if isShopOwner(shopId)
+        allow create: if isMember(shopId)
           && request.resource.data.keys().hasOnly(['materialName','weightGrams'])
           && validStock();
 
-        allow update: if isShopOwner(shopId)
+        allow update: if isMember(shopId)
           && request.resource.data.diff(resource.data).affectedKeys()
                .hasOnly(['materialName','weightGrams'])
           && validStock();
@@ -164,11 +200,11 @@ service cloud.firestore {
         allow delete: if false;
       }
 
-      // Sales to a bigger dealer / factory (1..30 items)
+      // Sales to a bigger dealer / factory: owner AND munshi create, only OWNER cancels.
       match /sales/{saleId} {
-        allow read: if isShopOwner(shopId);
+        allow read: if isMember(shopId);
 
-        allow create: if isShopOwner(shopId)
+        allow create: if isMember(shopId)
           && request.resource.data.keys().hasOnly(
                ['items','totalAmount','totalWeightGrams','buyerName','dayKey',
                 'createdAt','createdBy','isVoided'])
@@ -185,7 +221,6 @@ service cloud.firestore {
           && request.resource.data.createdBy == request.auth.uid
           && request.resource.data.isVoided == false;
 
-        // Same single transition as purchases: not voided -> voided.
         allow update: if isShopOwner(shopId)
           && resource.data.isVoided == false
           && request.resource.data.isVoided == true
@@ -194,15 +229,14 @@ service cloud.firestore {
         allow delete: if false;
       }
 
-      // Per-day SALES totals (same shape and checks as `daily`).
       match /salesDaily/{dayKey} {
-        allow read: if isShopOwner(shopId);
+        allow read: if isMember(shopId);
 
-        allow create: if isShopOwner(shopId)
+        allow create: if isMember(shopId)
           && request.resource.data.keys().hasOnly(['totalAmount','totalWeightGrams','entryCount'])
           && validDaily();
 
-        allow update: if isShopOwner(shopId)
+        allow update: if isMember(shopId)
           && request.resource.data.diff(resource.data).affectedKeys()
                .hasOnly(['totalAmount','totalWeightGrams','entryCount'])
           && validDaily();
@@ -210,8 +244,7 @@ service cloud.firestore {
         allow delete: if false;
       }
 
-      // Manual stock changes. Create-only: a record can never be edited or
-      // deleted. To undo one, make another adjustment.
+      // Manual stock changes: OWNER only. Create-only (never edited or deleted).
       match /adjustments/{adjustmentId} {
         allow read: if isShopOwner(shopId);
 
@@ -234,6 +267,34 @@ service cloud.firestore {
           && request.resource.data.createdBy == request.auth.uid;
 
         allow update, delete: if false;
+      }
+
+      // Shop running costs: OWNER only (Phase 4 block, now part of the main file).
+      match /expenses/{expenseId} {
+        allow read: if isShopOwner(shopId);
+
+        allow create: if isShopOwner(shopId)
+          && request.resource.data.keys().hasOnly(
+               ['amount','category','note','dayKey','createdAt','createdBy','isVoided'])
+          && request.resource.data.amount is int
+          && request.resource.data.amount > 0
+          && request.resource.data.amount <= 100000000
+          && request.resource.data.category in
+               ['labour','rent','utilities','transport','food','other']
+          && request.resource.data.note is string
+          && request.resource.data.note.size() <= 200
+          && request.resource.data.dayKey is string
+          && request.resource.data.dayKey.size() == 10
+          && request.resource.data.createdAt is timestamp
+          && request.resource.data.createdBy == request.auth.uid
+          && request.resource.data.isVoided == false;
+
+        allow update: if isShopOwner(shopId)
+          && resource.data.isVoided == false
+          && request.resource.data.isVoided == true
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isVoided','voidedAt']);
+
+        allow delete: if false;
       }
     }
   }
