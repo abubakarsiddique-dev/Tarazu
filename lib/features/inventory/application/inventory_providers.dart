@@ -5,6 +5,12 @@ import '../../auth/application/auth_providers.dart';
 import '../data/inventory_repository.dart';
 import '../domain/models.dart';
 import '../domain/sale_models.dart';
+import '../../auth/domain/app_user.dart';
+
+String? _onlyUid(Ref ref) {
+  final u = ref.watch(userProfileProvider).value;
+  return (u == null || u.role == UserRole.owner) ? null : u.uid;
+}
 
 final inventoryRepositoryProvider = Provider<InventoryRepository>(
   (ref) => InventoryRepository(
@@ -26,23 +32,42 @@ final materialsProvider = StreamProvider<List<ScrapMaterial>>((ref) {
   return ref.watch(inventoryRepositoryProvider).watchMaterials(shopId);
 });
 
-final purchasesForDayProvider = StreamProvider.family<List<Purchase>, String>((ref, day) {
+final purchasesForDayProvider = StreamProvider.family<List<Purchase>, String>((
+  ref,
+  day,
+) {
   final shopId = ref.watch(shopIdProvider);
   if (shopId == null) return Stream.value(const <Purchase>[]);
-  return ref.watch(inventoryRepositoryProvider).watchPurchases(shopId, day);
+  return ref
+      .watch(inventoryRepositoryProvider)
+      .watchPurchases(shopId, day, onlyUid: _onlyUid(ref));
 });
 
 /// Slips between two day keys (inclusive). Used by the History screen.
 final purchasesRangeProvider =
-    StreamProvider.family<List<Purchase>, ({String from, String to})>((ref, range) {
-  final shopId = ref.watch(shopIdProvider);
-  if (shopId == null) return Stream.value(const <Purchase>[]);
-  return ref.watch(inventoryRepositoryProvider).watchPurchasesRange(shopId, range.from, range.to);
-});
+    StreamProvider.family<List<Purchase>, ({String from, String to})>((
+      ref,
+      range,
+    ) {
+      final shopId = ref.watch(shopIdProvider);
+      if (shopId == null ||
+          ref.watch(userProfileProvider).value?.role != UserRole.owner) {
+        return Stream.value(const <Purchase>[]);
+      }
+      return ref
+          .watch(inventoryRepositoryProvider)
+          .watchPurchasesRange(shopId, range.from, range.to);
+    });
 
-final dailySummaryProvider = StreamProvider.family<DailySummary, String>((ref, day) {
+final dailySummaryProvider = StreamProvider.family<DailySummary, String>((
+  ref,
+  day,
+) {
   final shopId = ref.watch(shopIdProvider);
-  if (shopId == null) return Stream.value(const DailySummary.empty());
+  if (shopId == null ||
+      ref.watch(userProfileProvider).value?.role != UserRole.owner) {
+    return Stream.value(const DailySummary.empty());
+  }
   return ref.watch(inventoryRepositoryProvider).watchDaily(shopId, day);
 });
 
@@ -52,15 +77,26 @@ final stockProvider = StreamProvider<List<StockItem>>((ref) {
   return ref.watch(inventoryRepositoryProvider).watchStock(shopId);
 });
 
-final salesForDayProvider = StreamProvider.family<List<Sale>, String>((ref, day) {
+final salesForDayProvider = StreamProvider.family<List<Sale>, String>((
+  ref,
+  day,
+) {
   final shopId = ref.watch(shopIdProvider);
   if (shopId == null) return Stream.value(const <Sale>[]);
-  return ref.watch(inventoryRepositoryProvider).watchSales(shopId, day);
+  return ref
+      .watch(inventoryRepositoryProvider)
+      .watchSales(shopId, day, onlyUid: _onlyUid(ref));
 });
 
-final salesDailyProvider = StreamProvider.family<DailySummary, String>((ref, day) {
+final salesDailyProvider = StreamProvider.family<DailySummary, String>((
+  ref,
+  day,
+) {
   final shopId = ref.watch(shopIdProvider);
-  if (shopId == null) return Stream.value(const DailySummary.empty());
+  if (shopId == null ||
+      ref.watch(userProfileProvider).value?.role != UserRole.owner) {
+    return Stream.value(const DailySummary.empty());
+  }
   return ref.watch(inventoryRepositoryProvider).watchSalesDaily(shopId, day);
 });
 
@@ -81,11 +117,22 @@ class InventoryActions {
   String get _uid => _ref.read(firebaseAuthProvider).currentUser!.uid;
 
   static const commonMaterials = [
-    'Iron', 'Steel', 'Cardboard', 'Paper', 'Plastic', 'Aluminium', 'Copper', 'Brass',
+    'Iron',
+    'Steel',
+    'Cardboard',
+    'Paper',
+    'Plastic',
+    'Aluminium',
+    'Copper',
+    'Brass',
   ];
 
-  void addMaterial(String name, double rateKg, double ratePakaSeer, PriceUnit unit) =>
-      _repo.addMaterial(_shopId, name, rateKg, ratePakaSeer, unit);
+  void addMaterial(
+    String name,
+    double rateKg,
+    double ratePakaSeer,
+    PriceUnit unit,
+  ) => _repo.addMaterial(_shopId, name, rateKg, ratePakaSeer, unit);
 
   void updateMaterial(
     String id, {
@@ -94,23 +141,30 @@ class InventoryActions {
     double? ratePakaSeer,
     PriceUnit? priceUnit,
     bool? isActive,
-  }) =>
-      _repo.updateMaterial(_shopId, id,
-          name: name,
-          rateKg: rateKg,
-          ratePakaSeer: ratePakaSeer,
-          priceUnit: priceUnit,
-          isActive: isActive);
+  }) => _repo.updateMaterial(
+    _shopId,
+    id,
+    name: name,
+    rateKg: rateKg,
+    ratePakaSeer: ratePakaSeer,
+    priceUnit: priceUnit,
+    isActive: isActive,
+  );
 
   void seedCommonMaterials() => _repo.seedMaterials(_shopId, commonMaterials);
 
   void addSlip({required List<PurchaseItem> items, String sellerName = ''}) =>
-      _repo.addSlip(shopId: _shopId, uid: _uid, sellerName: sellerName, items: items);
+      _repo.addSlip(
+        shopId: _shopId,
+        uid: _uid,
+        sellerName: sellerName,
+        items: items,
+      );
 
   void voidPurchase(Purchase p) => _repo.voidPurchase(_shopId, p);
 
-  void addSale({required List<SaleItem> items, String buyerName = ''}) =>
-      _repo.addSale(shopId: _shopId, uid: _uid, buyerName: buyerName, items: items);
+  void addSale({required List<SaleItem> items, String buyerName = ''}) => _repo
+      .addSale(shopId: _shopId, uid: _uid, buyerName: buyerName, items: items);
 
   void voidSale(Sale s) => _repo.voidSale(_shopId, s);
 
@@ -120,16 +174,17 @@ class InventoryActions {
     required int deltaGrams,
     required AdjustmentReason reason,
     String note = '',
-  }) =>
-      _repo.adjustStock(
-        shopId: _shopId,
-        uid: _uid,
-        materialId: materialId,
-        materialName: materialName,
-        deltaGrams: deltaGrams,
-        reason: reason,
-        note: note,
-      );
+  }) => _repo.adjustStock(
+    shopId: _shopId,
+    uid: _uid,
+    materialId: materialId,
+    materialName: materialName,
+    deltaGrams: deltaGrams,
+    reason: reason,
+    note: note,
+  );
 }
 
-final inventoryActionsProvider = Provider<InventoryActions>((ref) => InventoryActions(ref));
+final inventoryActionsProvider = Provider<InventoryActions>(
+  (ref) => InventoryActions(ref),
+);

@@ -23,6 +23,7 @@ import '../../features/inventory/presentation/report_screen.dart';
 import '../../features/finance/presentation/expenses_screen.dart';
 import '../../features/finance/presentation/profit_screen.dart';
 import '../../features/auth/application/auth_providers.dart';
+import '../../features/staff/presentation/staff_summary_screen.dart';
 
 class Routes {
   Routes._();
@@ -42,19 +43,33 @@ class Routes {
   static const profileMissing = '/profile-missing';
   static const report = '/report';
   static const profit = '/profit';
-   static const expenses = '/expenses';
-   static const staff = '/staff';
-
+  static const expenses = '/expenses';
+  static const staff = '/staff';
+  static const staffSummary = '/staff-summary';
 }
 
 const _publicAuthPages = [Routes.login, Routes.register, Routes.forgotPassword];
 const _preAuthPages = [Routes.splash, Routes.onboarding, ..._publicAuthPages];
-const _ownerOnlyPages = [Routes.staff, Routes.report, Routes.profit, Routes.expenses];
+const _ownerOnlyPages = [
+  Routes.staff,
+  Routes.report,
+  Routes.profit,
+  Routes.expenses,
+  Routes.history,
+  Routes.sales,
+  Routes.materials,
+  Routes.staffSummary,
+];
+
 /// Redirect rules, extracted so they can be unit tested.
 
-String? redirectFor(SessionStatus status, String location, {bool isOwner = true}) {
+String? redirectFor(
+  SessionStatus status,
+  String location, {
+  bool isOwner = true,
+}) {
   switch (status) {
-        case SessionStatus.active:
+    case SessionStatus.active:
       if (_preAuthPages.contains(location)) return Routes.home;
       if (!isOwner && _ownerOnlyPages.contains(location)) return Routes.home;
       return null;
@@ -78,26 +93,45 @@ String? redirectFor(SessionStatus status, String location, {bool isOwner = true}
 final routerProvider = Provider<GoRouter>((ref) {
   // Bridge Riverpod -> go_router: re-run redirect whenever session status changes.
   final refresh = ValueNotifier<int>(0);
-  ref.listen<SessionStatus>(sessionStatusProvider, (prev, next) => refresh.value++);
+  ref.listen<SessionStatus>(
+    sessionStatusProvider,
+    (prev, next) => refresh.value++,
+  );
   ref.onDispose(refresh.dispose);
 
   final router = GoRouter(
     initialLocation: Routes.splash,
     refreshListenable: refresh,
-       redirect: (context, state) => redirectFor(
+    redirect: (context, state) => redirectFor(
       ref.read(sessionStatusProvider),
       state.matchedLocation,
       isOwner: ref.read(isOwnerProvider),
     ),
     routes: [
       GoRoute(path: Routes.splash, builder: (_, _) => const SplashScreen()),
-      GoRoute(path: Routes.onboarding, builder: (_, _) => const OnboardingScreen()),
+      GoRoute(
+        path: Routes.onboarding,
+        builder: (_, _) => const OnboardingScreen(),
+      ),
       GoRoute(path: Routes.login, builder: (_, _) => const LoginScreen()),
       GoRoute(path: Routes.register, builder: (_, _) => const RegisterScreen()),
-      GoRoute(path: Routes.forgotPassword, builder: (_, _) => const ForgotPasswordScreen()),
+      GoRoute(
+        path: Routes.forgotPassword,
+        builder: (_, _) => const ForgotPasswordScreen(),
+      ),
       GoRoute(path: Routes.home, builder: (_, _) => const HomeScreen()),
-      GoRoute(path: Routes.addPurchase, builder: (_, _) => const AddPurchaseScreen()),
-      GoRoute(path: Routes.materials, builder: (_, _) => const MaterialsScreen()),
+      GoRoute(
+        path: Routes.addPurchase,
+        builder: (_, _) => const AddPurchaseScreen(),
+      ),
+      GoRoute(
+        path: Routes.materials,
+        builder: (_, _) => const MaterialsScreen(),
+      ),
+      GoRoute(
+        path: Routes.staffSummary,
+        builder: (_, _) => const StaffSummaryScreen(),
+      ),
       GoRoute(path: Routes.stock, builder: (_, _) => const StockScreen()),
       GoRoute(path: Routes.history, builder: (_, _) => const HistoryScreen()),
       GoRoute(path: Routes.newSale, builder: (_, _) => const NewSaleScreen()),

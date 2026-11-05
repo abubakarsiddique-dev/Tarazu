@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:tarazu/features/staff/presentation/munshi_home_screen.dart';
 
 import '../../../core/constants/app_strings.dart';
+import '../../staff/presentation/staff_summary_screen.dart'; 
 import '../../../core/router/app_router.dart';
 import '../../../core/utils/format.dart';
 import '../../../core/utils/validators.dart';
@@ -14,6 +16,7 @@ import '../../inventory/presentation/slip_sheet.dart';
 import '../../inventory/presentation/report_screen.dart' show ReportStrings;
 import '../../finance/domain/finance_strings.dart';
 import '../../staff/domain/staff_strings.dart';
+import '../../staff/presentation/staff_entry_card.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -63,6 +66,7 @@ class HomeScreen extends ConsumerWidget {
     final theme = Theme.of(context);
     final user = ref.watch(userProfileProvider).value;
     final isOwner = ref.watch(isOwnerProvider);
+     if (user != null && !isOwner) return const MunshiHomeScreen();
     final day = dayKey(DateTime.now());
     final summary =
         ref.watch(dailySummaryProvider(day)).value ??
@@ -146,11 +150,11 @@ class HomeScreen extends ConsumerWidget {
             label: const Text(AppStrings.history),
           ),
                     if (isOwner) ...[
-            const SizedBox(height: 12),
+           const SizedBox(height: 12),
             OutlinedButton.icon(
-              onPressed: () => context.push(Routes.report),
-              icon: const Icon(Icons.assessment_outlined),
-              label: const Text(ReportStrings.title),
+              onPressed: () => context.push(Routes.staffSummary),
+              icon: const Icon(Icons.groups_2_outlined),
+              label: const Text('Munshi hisaab'),
             ),
             const SizedBox(height: 12),
             OutlinedButton.icon(
@@ -191,7 +195,8 @@ class HomeScreen extends ConsumerWidget {
               return Column(
                 children: [
                   for (final p in list)
-                    Card(
+                    StaffEntryCard(
+                      createdBy: p.createdBy,
                       child: ListTile(
                         title: Text(p.title),
                         subtitle: Text(

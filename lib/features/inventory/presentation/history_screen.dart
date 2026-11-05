@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:tarazu/features/staff/presentation/staff_entry_card.dart';
 
 import '../../../core/constants/app_strings.dart';
 import '../../../core/utils/format.dart';
@@ -246,7 +247,8 @@ class _Body extends StatelessWidget {
             Text(AppStrings.slipsOfDay, style: theme.textTheme.titleMedium),
             const SizedBox(height: 8),
             for (final p in summary.slips)
-              Card(
+              StaffEntryCard(
+                createdBy: p.createdBy,
                 child: ListTile(
                   title: Text(p.title),
                   subtitle: Text(

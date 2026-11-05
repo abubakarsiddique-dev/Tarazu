@@ -50,6 +50,7 @@ class Sale {
     required this.dayKey,
     required this.createdAt,
     required this.pendingSync,
+    this.createdBy = '',
   });
 
   final String id;
@@ -66,7 +67,7 @@ class Sale {
     if (names.length <= 2) return names.join(', ');
     return '${names.take(2).join(', ')} +${names.length - 2}';
   }
-
+  final String createdBy;
   factory Sale.fromDoc(QueryDocumentSnapshot<Map<String, dynamic>> d) {
     final m = d.data();
     final raw = m['items'];
@@ -82,6 +83,7 @@ class Sale {
       dayKey: m['dayKey'] as String? ?? '',
       createdAt: (m['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       pendingSync: d.metadata.hasPendingWrites,
+      createdBy: m['createdBy'] as String? ?? '',
     );
   }
 }

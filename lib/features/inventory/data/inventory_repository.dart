@@ -14,7 +14,7 @@ import '../domain/sale_models.dart';
 ///    as the slip. Increments work offline and merge correctly on sync.
 class InventoryRepository {
   InventoryRepository(this._db, {WriteErrorHandler? onWriteError})
-      : _onWriteError = onWriteError;
+    : _onWriteError = onWriteError;
 
   final FirebaseFirestore _db;
   final WriteErrorHandler? _onWriteError;
@@ -22,7 +22,8 @@ class InventoryRepository {
   DocumentReference<Map<String, dynamic>> _shop(String shopId) =>
       _db.collection('shops').doc(shopId);
 
-  void _send(Future<void> write, WriteKind kind) => sendWrite(write, kind, _onWriteError);
+  void _send(Future<void> write, WriteKind kind) =>
+      sendWrite(write, kind, _onWriteError);
 
   // ---------- reads ----------
 
@@ -35,33 +36,44 @@ class InventoryRepository {
   }
 
   /// Single-field filter only, so no composite index is needed.
-  Stream<List<Purchase>> watchPurchases(String shopId, String day) {
-    return _shop(shopId)
-        .collection('purchases')
-        .where('dayKey', isEqualTo: day)
-        .snapshots(includeMetadataChanges: true)
-        .map((snap) {
-      final list = snap.docs
-          .where((d) => (d.data()['isVoided'] as bool? ?? false) == false)
-          .map(Purchase.fromDoc)
-          .toList()
-        ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+  Stream<List<Purchase>> watchPurchases(
+    String shopId,
+    String day, {
+    String? onlyUid,
+  }) {
+    Query<Map<String, dynamic>> q = _shop(
+      shopId,
+    ).collection('purchases').where('dayKey', isEqualTo: day);
+    if (onlyUid != null) q = q.where('createdBy', isEqualTo: onlyUid);
+    return q.snapshots(includeMetadataChanges: true).map((snap) {
+      final list =
+          snap.docs
+              .where((d) => (d.data()['isVoided'] as bool? ?? false) == false)
+              .map(Purchase.fromDoc)
+              .toList()
+            ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
       return list;
     });
   }
 
   /// Slips from [fromDay] to [toDay] (inclusive, "yyyy-MM-dd" keys sort by date).
   /// Range filter on ONE field, so no composite index is needed.
-  Stream<List<Purchase>> watchPurchasesRange(String shopId, String fromDay, String toDay) {
+  Stream<List<Purchase>> watchPurchasesRange(
+    String shopId,
+    String fromDay,
+    String toDay,
+  ) {
     return _shop(shopId)
         .collection('purchases')
         .where('dayKey', isGreaterThanOrEqualTo: fromDay)
         .where('dayKey', isLessThanOrEqualTo: toDay)
         .snapshots()
-        .map((snap) => snap.docs
-            .where((d) => (d.data()['isVoided'] as bool? ?? false) == false)
-            .map(Purchase.fromDoc)
-            .toList());
+        .map(
+          (snap) => snap.docs
+              .where((d) => (d.data()['isVoided'] as bool? ?? false) == false)
+              .map(Purchase.fromDoc)
+              .toList(),
+        );
   }
 
   Stream<DailySummary> watchDaily(String shopId, String day) {
@@ -75,7 +87,11 @@ class InventoryRepository {
   Stream<List<StockItem>> watchStock(String shopId) {
     return _shop(shopId).collection('stock').snapshots().map((snap) {
       final list = snap.docs.map(StockItem.fromDoc).toList()
-        ..sort((a, b) => a.materialName.toLowerCase().compareTo(b.materialName.toLowerCase()));
+        ..sort(
+          (a, b) => a.materialName.toLowerCase().compareTo(
+            b.materialName.toLowerCase(),
+          ),
+        );
       return list;
     });
   }
@@ -149,11 +165,16 @@ class InventoryRepository {
   // ---------- slips ----------
 
   /// Weight per material (the same material may appear on two lines).
-  Map<String, ({String name, int grams})> _stockDeltas(List<PurchaseItem> items) {
+  Map<String, ({String name, int grams})> _stockDeltas(
+    List<PurchaseItem> items,
+  ) {
     final out = <String, ({String name, int grams})>{};
     for (final i in items) {
       final prev = out[i.materialId];
-      out[i.materialId] = (name: i.materialName, grams: (prev?.grams ?? 0) + i.weightGrams);
+      out[i.materialId] = (
+        name: i.materialName,
+        grams: (prev?.grams ?? 0) + i.weightGrams,
+      );
     }
     return out;
   }
@@ -182,23 +203,18 @@ class InventoryRepository {
         'createdBy': uid,
         'isVoided': false,
       })
-      ..set(
-        shop.collection('daily').doc(day),
-        {
-          'totalAmount': FieldValue.increment(totalAmount),
-          'totalWeightGrams': FieldValue.increment(totalGrams),
-          'entryCount': FieldValue.increment(1),
-        },
-        SetOptions(merge: true),
-      );
+      ..set(shop.collection('daily').doc(day), {
+        'totalAmount': FieldValue.increment(totalAmount),
+        'totalWeightGrams': FieldValue.increment(totalGrams),
+        'entryCount': FieldValue.increment(1),
+      }, SetOptions(merge: true));
 
     // Stock = what is physically on the scale, per material.
     _stockDeltas(items).forEach((materialId, d) {
-      batch.set(
-        shop.collection('stock').doc(materialId),
-        {'materialName': d.name, 'weightGrams': FieldValue.increment(d.grams)},
-        SetOptions(merge: true),
-      );
+      batch.set(shop.collection('stock').doc(materialId), {
+        'materialName': d.name,
+        'weightGrams': FieldValue.increment(d.grams),
+      }, SetOptions(merge: true));
     });
     _send(batch.commit(), WriteKind.slip);
   }
@@ -211,21 +227,15 @@ class InventoryRepository {
         'isVoided': true,
         'voidedAt': Timestamp.now(),
       })
-      ..set(
-        shop.collection('daily').doc(p.dayKey),
-        {
-          'totalAmount': FieldValue.increment(-p.totalAmount),
-          'totalWeightGrams': FieldValue.increment(-p.totalWeightGrams),
-          'entryCount': FieldValue.increment(-1),
-        },
-        SetOptions(merge: true),
-      );
+      ..set(shop.collection('daily').doc(p.dayKey), {
+        'totalAmount': FieldValue.increment(-p.totalAmount),
+        'totalWeightGrams': FieldValue.increment(-p.totalWeightGrams),
+        'entryCount': FieldValue.increment(-1),
+      }, SetOptions(merge: true));
     _stockDeltas(p.items).forEach((materialId, d) {
-      batch.set(
-        shop.collection('stock').doc(materialId),
-        {'weightGrams': FieldValue.increment(-d.grams)},
-        SetOptions(merge: true),
-      );
+      batch.set(shop.collection('stock').doc(materialId), {
+        'weightGrams': FieldValue.increment(-d.grams),
+      }, SetOptions(merge: true));
     });
     _send(batch.commit(), WriteKind.voidSlip);
   }
@@ -233,17 +243,18 @@ class InventoryRepository {
   // ---------- sales (dispatch to a bigger dealer / factory) ----------
 
   /// Single-field filter only, so no composite index is needed.
-  Stream<List<Sale>> watchSales(String shopId, String day) {
-    return _shop(shopId)
-        .collection('sales')
-        .where('dayKey', isEqualTo: day)
-        .snapshots(includeMetadataChanges: true)
-        .map((snap) {
-      final list = snap.docs
-          .where((d) => (d.data()['isVoided'] as bool? ?? false) == false)
-          .map(Sale.fromDoc)
-          .toList()
-        ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+  Stream<List<Sale>> watchSales(String shopId, String day, {String? onlyUid}) {
+    Query<Map<String, dynamic>> q = _shop(
+      shopId,
+    ).collection('sales').where('dayKey', isEqualTo: day);
+    if (onlyUid != null) q = q.where('createdBy', isEqualTo: onlyUid);
+    return q.snapshots(includeMetadataChanges: true).map((snap) {
+      final list =
+          snap.docs
+              .where((d) => (d.data()['isVoided'] as bool? ?? false) == false)
+              .map(Sale.fromDoc)
+              .toList()
+            ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
       return list;
     });
   }
@@ -260,7 +271,10 @@ class InventoryRepository {
     final out = <String, ({String name, int grams})>{};
     for (final i in items) {
       final prev = out[i.materialId];
-      out[i.materialId] = (name: i.materialName, grams: (prev?.grams ?? 0) + i.weightGrams);
+      out[i.materialId] = (
+        name: i.materialName,
+        grams: (prev?.grams ?? 0) + i.weightGrams,
+      );
     }
     return out;
   }
@@ -291,21 +305,16 @@ class InventoryRepository {
         'createdBy': uid,
         'isVoided': false,
       })
-      ..set(
-        shop.collection('salesDaily').doc(day),
-        {
-          'totalAmount': FieldValue.increment(totalAmount),
-          'totalWeightGrams': FieldValue.increment(totalGrams),
-          'entryCount': FieldValue.increment(1),
-        },
-        SetOptions(merge: true),
-      );
+      ..set(shop.collection('salesDaily').doc(day), {
+        'totalAmount': FieldValue.increment(totalAmount),
+        'totalWeightGrams': FieldValue.increment(totalGrams),
+        'entryCount': FieldValue.increment(1),
+      }, SetOptions(merge: true));
     _saleDeltas(items).forEach((materialId, d) {
-      batch.set(
-        shop.collection('stock').doc(materialId),
-        {'materialName': d.name, 'weightGrams': FieldValue.increment(-d.grams)},
-        SetOptions(merge: true),
-      );
+      batch.set(shop.collection('stock').doc(materialId), {
+        'materialName': d.name,
+        'weightGrams': FieldValue.increment(-d.grams),
+      }, SetOptions(merge: true));
     });
     _send(batch.commit(), WriteKind.sale);
   }
@@ -319,21 +328,16 @@ class InventoryRepository {
         'isVoided': true,
         'voidedAt': Timestamp.now(),
       })
-      ..set(
-        shop.collection('salesDaily').doc(s.dayKey),
-        {
-          'totalAmount': FieldValue.increment(-s.totalAmount),
-          'totalWeightGrams': FieldValue.increment(-s.totalWeightGrams),
-          'entryCount': FieldValue.increment(-1),
-        },
-        SetOptions(merge: true),
-      );
+      ..set(shop.collection('salesDaily').doc(s.dayKey), {
+        'totalAmount': FieldValue.increment(-s.totalAmount),
+        'totalWeightGrams': FieldValue.increment(-s.totalWeightGrams),
+        'entryCount': FieldValue.increment(-1),
+      }, SetOptions(merge: true));
     _saleDeltas(s.items).forEach((materialId, d) {
-      batch.set(
-        shop.collection('stock').doc(materialId),
-        {'materialName': d.name, 'weightGrams': FieldValue.increment(d.grams)},
-        SetOptions(merge: true),
-      );
+      batch.set(shop.collection('stock').doc(materialId), {
+        'materialName': d.name,
+        'weightGrams': FieldValue.increment(d.grams),
+      }, SetOptions(merge: true));
     });
     _send(batch.commit(), WriteKind.voidSale);
   }
@@ -365,11 +369,10 @@ class InventoryRepository {
         'createdAt': Timestamp.fromDate(now),
         'createdBy': uid,
       })
-      ..set(
-        shop.collection('stock').doc(materialId),
-        {'materialName': materialName, 'weightGrams': FieldValue.increment(deltaGrams)},
-        SetOptions(merge: true),
-      );
+      ..set(shop.collection('stock').doc(materialId), {
+        'materialName': materialName,
+        'weightGrams': FieldValue.increment(deltaGrams),
+      }, SetOptions(merge: true));
     _send(batch.commit(), WriteKind.adjustment);
   }
 }

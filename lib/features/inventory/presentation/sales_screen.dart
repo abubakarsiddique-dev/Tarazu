@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:tarazu/features/staff/presentation/staff_entry_card.dart';
 
 import '../../../core/constants/app_strings.dart';
 import '../../../core/router/app_router.dart';
@@ -116,9 +117,9 @@ class SalesScreen extends ConsumerWidget {
                 child: Center(child: Text(SaleStrings.noSalesToday)),
               ),
             for (final s in list)
-              Card(
+             StaffEntryCard(
+                createdBy: s.createdBy,
                 child: ListTile(
-                  onTap: () => _open(context, ref, s, isOwner: isOwner),
                   title: Text(s.title),
                   subtitle: Text(
                     '${formatTime(s.createdAt)} • ${formatKg(s.totalWeightGrams)}'

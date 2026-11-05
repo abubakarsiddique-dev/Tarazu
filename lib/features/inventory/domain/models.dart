@@ -130,6 +130,7 @@ class Purchase {
     required this.dayKey,
     required this.createdAt,
     required this.pendingSync,
+    this.createdBy = '',
   });
 
   final String id;
@@ -148,7 +149,8 @@ class Purchase {
     if (names.length <= 2) return names.join(', ');
     return '${names.take(2).join(', ')} +${names.length - 2}';
   }
-
+/// uid of whoever saved the slip (owner or munshi).
+  final String createdBy;
   factory Purchase.fromDoc(QueryDocumentSnapshot<Map<String, dynamic>> d) {
     final m = d.data();
     final raw = m['items'];
@@ -171,7 +173,10 @@ class Purchase {
       sellerName: m['sellerName'] as String? ?? '',
       dayKey: m['dayKey'] as String? ?? '',
       createdAt: (m['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      // pendingSync: d.metadata.hasPendingWrites,
       pendingSync: d.metadata.hasPendingWrites,
+      createdBy: m['createdBy'] as String? ?? '',
+      
     );
   }
 }
