@@ -11,6 +11,7 @@ import '../application/inventory_providers.dart';
 import '../domain/models.dart';
 import '../domain/sale_models.dart';
 import '../domain/sale_strings.dart';
+import '../../auth/application/auth_providers.dart';
 
 typedef _Adjustment = ({int deltaGrams, AdjustmentReason reason, String note});
 
@@ -36,6 +37,7 @@ class StockScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final stock = ref.watch(stockProvider);
     final theme = Theme.of(context);
+    final isOwner = ref.watch(isOwnerProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -83,7 +85,7 @@ class StockScreen extends ConsumerWidget {
               const Divider(height: 1),
               for (final i in items)
                 ListTile(
-                  onTap: () => _adjust(context, ref, i),
+                  onTap: isOwner ? () => _adjust(context, ref, i) : null,
                   title: Text(i.materialName),
                   trailing: Text(
                     formatKg(i.weightGrams),

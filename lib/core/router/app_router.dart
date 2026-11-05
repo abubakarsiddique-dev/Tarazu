@@ -22,6 +22,7 @@ import 'session.dart';
 import '../../features/inventory/presentation/report_screen.dart';
 import '../../features/finance/presentation/expenses_screen.dart';
 import '../../features/finance/presentation/profit_screen.dart';
+import '../../features/auth/application/auth_providers.dart';
 
 class Routes {
   Routes._();
@@ -48,10 +49,15 @@ class Routes {
 
 const _publicAuthPages = [Routes.login, Routes.register, Routes.forgotPassword];
 const _preAuthPages = [Routes.splash, Routes.onboarding, ..._publicAuthPages];
-
+const _ownerOnlyPages = [Routes.staff, Routes.report, Routes.profit, Routes.expenses];
 /// Redirect rules, extracted so they can be unit tested.
-String? redirectFor(SessionStatus status, String location) {
+
+String? redirectFor(SessionStatus status, String location, {bool isOwner = true}) {
   switch (status) {
+        case SessionStatus.active:
+      if (_preAuthPages.contains(location)) return Routes.home;
+      if (!isOwner && _ownerOnlyPages.contains(location)) return Routes.home;
+      return null;
     case SessionStatus.loading:
       return location == Routes.splash ? null : Routes.splash;
     case SessionStatus.registering:
@@ -78,8 +84,11 @@ final routerProvider = Provider<GoRouter>((ref) {
   final router = GoRouter(
     initialLocation: Routes.splash,
     refreshListenable: refresh,
-    redirect: (context, state) =>
-        redirectFor(ref.read(sessionStatusProvider), state.matchedLocation),
+       redirect: (context, state) => redirectFor(
+      ref.read(sessionStatusProvider),
+      state.matchedLocation,
+      isOwner: ref.read(isOwnerProvider),
+    ),
     routes: [
       GoRoute(path: Routes.splash, builder: (_, _) => const SplashScreen()),
       GoRoute(path: Routes.onboarding, builder: (_, _) => const OnboardingScreen()),

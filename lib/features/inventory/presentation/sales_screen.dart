@@ -9,12 +9,13 @@ import '../application/inventory_providers.dart';
 import '../domain/models.dart';
 import '../domain/sale_models.dart';
 import '../domain/sale_strings.dart';
+import '../../auth/application/auth_providers.dart';
 
 /// Today's sales. Like purchases, only TODAY's sales can be cancelled.
 class SalesScreen extends ConsumerWidget {
   const SalesScreen({super.key});
 
-  Future<void> _open(BuildContext context, WidgetRef ref, Sale s) async {
+  Future<void> _open(BuildContext context, WidgetRef ref, Sale s, {required bool isOwner}) async {
     final theme = Theme.of(context);
     final wantsCancel = await showDialog<bool>(
       context: context,
@@ -41,7 +42,7 @@ class SalesScreen extends ConsumerWidget {
           ),
         ),
         actions: [
-          TextButton(
+          if (isOwner) TextButton(
             onPressed: () => Navigator.of(ctx).pop(true),
             child: Text(SaleStrings.cancelSale, style: TextStyle(color: theme.colorScheme.error)),
           ),
@@ -71,6 +72,7 @@ class SalesScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final isOwner = ref.watch(isOwnerProvider);
     final day = dayKey(DateTime.now());
     final sales = ref.watch(salesForDayProvider(day));
     final summary = ref.watch(salesDailyProvider(day)).value ?? const DailySummary.empty();
@@ -116,7 +118,7 @@ class SalesScreen extends ConsumerWidget {
             for (final s in list)
               Card(
                 child: ListTile(
-                  onTap: () => _open(context, ref, s),
+                  onTap: () => _open(context, ref, s, isOwner: isOwner),
                   title: Text(s.title),
                   subtitle: Text(
                     '${formatTime(s.createdAt)} • ${formatKg(s.totalWeightGrams)}'

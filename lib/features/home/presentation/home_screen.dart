@@ -13,6 +13,7 @@ import '../../inventory/domain/models.dart';
 import '../../inventory/presentation/slip_sheet.dart';
 import '../../inventory/presentation/report_screen.dart' show ReportStrings;
 import '../../finance/domain/finance_strings.dart';
+import '../../staff/domain/staff_strings.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -61,6 +62,7 @@ class HomeScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final user = ref.watch(userProfileProvider).value;
+    final isOwner = ref.watch(isOwnerProvider);
     final day = dayKey(DateTime.now());
     final summary =
         ref.watch(dailySummaryProvider(day)).value ??
@@ -143,24 +145,32 @@ class HomeScreen extends ConsumerWidget {
             icon: const Icon(Icons.bar_chart),
             label: const Text(AppStrings.history),
           ),
-          const SizedBox(height: 12),
-          OutlinedButton.icon(
-            onPressed: () => context.push(Routes.report),
-            icon: const Icon(Icons.assessment_outlined),
-            label: const Text(ReportStrings.title),
-          ),
-          const SizedBox(height: 12),
-          OutlinedButton.icon(
-            onPressed: () => context.push(Routes.profit),
-            icon: const Icon(Icons.trending_up),
-            label: const Text(FinanceStrings.profit),
-          ),
-          const SizedBox(height: 12),
-          OutlinedButton.icon(
-            onPressed: () => context.push(Routes.expenses),
-            icon: const Icon(Icons.receipt_long_outlined),
-            label: const Text(FinanceStrings.expensesTitle),
-          ),
+                    if (isOwner) ...[
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: () => context.push(Routes.report),
+              icon: const Icon(Icons.assessment_outlined),
+              label: const Text(ReportStrings.title),
+            ),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: () => context.push(Routes.profit),
+              icon: const Icon(Icons.trending_up),
+              label: const Text(FinanceStrings.profit),
+            ),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: () => context.push(Routes.expenses),
+              icon: const Icon(Icons.receipt_long_outlined),
+              label: const Text(FinanceStrings.expensesTitle),
+            ),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: () => context.push(Routes.staff),
+              icon: const Icon(Icons.group),
+              label: const Text(StaffStrings.title),
+            ),
+          ],
 
           const SizedBox(height: 24),
           Text(AppStrings.purchasesToday, style: theme.textTheme.titleMedium),
@@ -217,11 +227,11 @@ class HomeScreen extends ConsumerWidget {
                         onTap: () => showSlipSheet(
                           context,
                           p,
-                          onVoid: () => _confirmVoid(context, ref, p),
+                          onVoid: isOwner ? () => _confirmVoid(context, ref, p) : null,
                           shopName: user?.shopName ?? '',
                           shopPhone: user?.phone ?? '',
                         ),
-                        onLongPress: () => _confirmVoid(context, ref, p),
+                        onLongPress: isOwner ? () => _confirmVoid(context, ref, p) : null,
                       ),
                     ),
                 ],
