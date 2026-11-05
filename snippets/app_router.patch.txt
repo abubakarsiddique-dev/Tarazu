@@ -1,10 +1,13 @@
-lib/core/router/app_router.dart  (3 small edits)
+lib/core/router/app_router.dart  (4 small edits)
 
-1) import (with the other inventory imports):
-   import '../../features/inventory/presentation/report_screen.dart';
+1) imports (with the other feature imports):
+   import '../../features/finance/presentation/expenses_screen.dart';
+   import '../../features/finance/presentation/profit_screen.dart';
 
-2) class Routes: add one line
-   static const report = '/report';
+2) class Routes: add two lines
+   static const profit = '/profit';
+   static const expenses = '/expenses';
 
 3) routes list: add next to the other GoRoute(...) lines
-   GoRoute(path: Routes.report, builder: (_, _) => const ReportScreen()),
+   GoRoute(path: Routes.profit, builder: (_, _) => const ProfitScreen()),
+   GoRoute(path: Routes.expenses, builder: (_, _) => const ExpensesScreen()),

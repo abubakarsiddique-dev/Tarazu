@@ -1,13 +1,19 @@
-lib/features/home/presentation/home_screen.dart  (1 import + 1 button)
+lib/features/home/presentation/home_screen.dart  (1 import + 2 buttons)
 
 1) import:
-   import '../../inventory/presentation/report_screen.dart' show ReportStrings;
+   import '../../finance/domain/finance_strings.dart';
 
-2) Add this button anywhere in the body list (for example right after the History button):
+2) Add these two buttons in the body list, right after the Report button:
 
           const SizedBox(height: 12),
           OutlinedButton.icon(
-            onPressed: () => context.push(Routes.report),
-            icon: const Icon(Icons.assessment_outlined),
-            label: const Text(ReportStrings.title),
+            onPressed: () => context.push(Routes.profit),
+            icon: const Icon(Icons.trending_up),
+            label: const Text(FinanceStrings.profit),
+          ),
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
+            onPressed: () => context.push(Routes.expenses),
+            icon: const Icon(Icons.receipt_long_outlined),
+            label: const Text(FinanceStrings.expensesTitle),
           ),

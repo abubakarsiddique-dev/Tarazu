@@ -12,6 +12,7 @@ import '../../inventory/application/inventory_providers.dart';
 import '../../inventory/domain/models.dart';
 import '../../inventory/presentation/slip_sheet.dart';
 import '../../inventory/presentation/report_screen.dart' show ReportStrings;
+import '../../finance/domain/finance_strings.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -148,6 +149,19 @@ class HomeScreen extends ConsumerWidget {
             icon: const Icon(Icons.assessment_outlined),
             label: const Text(ReportStrings.title),
           ),
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
+            onPressed: () => context.push(Routes.profit),
+            icon: const Icon(Icons.trending_up),
+            label: const Text(FinanceStrings.profit),
+          ),
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
+            onPressed: () => context.push(Routes.expenses),
+            icon: const Icon(Icons.receipt_long_outlined),
+            label: const Text(FinanceStrings.expensesTitle),
+          ),
+
           const SizedBox(height: 24),
           Text(AppStrings.purchasesToday, style: theme.textTheme.titleMedium),
           const SizedBox(height: 8),

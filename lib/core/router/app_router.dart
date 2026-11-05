@@ -19,6 +19,8 @@ import '../../features/splash/presentation/splash_screen.dart';
 import '../constants/app_strings.dart';
 import 'session.dart';
 import '../../features/inventory/presentation/report_screen.dart';
+import '../../features/finance/presentation/expenses_screen.dart';
+import '../../features/finance/presentation/profit_screen.dart';
 
 class Routes {
   Routes._();
@@ -37,6 +39,8 @@ class Routes {
   static const disabled = '/disabled';
   static const profileMissing = '/profile-missing';
   static const report = '/report';
+  static const profit = '/profit';
+   static const expenses = '/expenses';
 
 }
 
@@ -88,6 +92,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: Routes.newSale, builder: (_, _) => const NewSaleScreen()),
       GoRoute(path: Routes.sales, builder: (_, _) => const SalesScreen()),
       GoRoute(path: Routes.report, builder: (_, _) => const ReportScreen()),
+      GoRoute(path: Routes.profit, builder: (_, _) => const ProfitScreen()),
+      GoRoute(path: Routes.expenses, builder: (_, _) => const ExpensesScreen()),
       GoRoute(
         path: Routes.disabled,
         builder: (_, _) => const AccountBlockedScreen(

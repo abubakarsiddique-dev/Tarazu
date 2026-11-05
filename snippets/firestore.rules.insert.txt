@@ -1,32 +1,27 @@
-      // ---- PASTE THIS inside `match /shops/{shopId} { ... }`, e.g. right after the
-      // ---- `match /stock/{materialId} { ... }` block (before the closing braces).
+      // ---- PASTE THIS inside `match /shops/{shopId} { ... }`, for example right after
+      // ---- the `match /adjustments/{adjustmentId} { ... }` block.
 
-      // Stock that left the shop (weight only). Same audit-trail style as purchases.
-      match /dispatches/{dispatchId} {
+      // Shop running costs (labour, rent, electricity ...). Same audit-trail style
+      // as purchases: create, then only one transition not-voided -> voided.
+      match /expenses/{expenseId} {
         allow read: if isShopOwner(shopId);
 
         allow create: if isShopOwner(shopId)
           && request.resource.data.keys().hasOnly(
-               ['materialId','materialName','weightGrams','buyerName','note','dayKey',
-                'createdAt','createdBy','isVoided'])
-          && request.resource.data.materialId is string
-          && request.resource.data.materialId.size() > 0
-          && request.resource.data.materialName is string
-          && request.resource.data.materialName.size() > 0
-          && request.resource.data.materialName.size() <= 60
-          && request.resource.data.weightGrams is int
-          && request.resource.data.weightGrams > 0
-          && request.resource.data.buyerName is string
-          && request.resource.data.buyerName.size() <= 60
+               ['amount','category','note','dayKey','createdAt','createdBy','isVoided'])
+          && request.resource.data.amount is int
+          && request.resource.data.amount > 0
+          && request.resource.data.amount <= 100000000
+          && request.resource.data.category in
+               ['labour','rent','utilities','transport','food','other']
           && request.resource.data.note is string
-          && request.resource.data.note.size() <= 120
+          && request.resource.data.note.size() <= 200
           && request.resource.data.dayKey is string
           && request.resource.data.dayKey.size() == 10
           && request.resource.data.createdAt is timestamp
           && request.resource.data.createdBy == request.auth.uid
           && request.resource.data.isVoided == false;
 
-        // Only one transition: not voided -> voided. No edits, no un-void.
         allow update: if isShopOwner(shopId)
           && resource.data.isVoided == false
           && request.resource.data.isVoided == true
