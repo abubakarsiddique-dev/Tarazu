@@ -3,12 +3,21 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/utils/format.dart';
 import '../../inventory/application/inventory_providers.dart';
+import '../../inventory/application/report_providers.dart' show salesRangeProvider;
+import '../../inventory/domain/history.dart';
 import '../../inventory/domain/models.dart' show dayKey;
 import '../application/staff_lookup.dart';
 import '../domain/staff_summary.dart';
 import 'staff_entry_card.dart';
 
-/// OWNER ONLY. Who bought and sold how much on a day, one card per munshi.
+String _label(HistoryPeriod p, DateTime start) {
+  final from = dayKey(start);
+  final to = dayKey(periodEnd(p, start));
+  return p == HistoryPeriod.day ? from : '$from  to  $to';
+}
+
+/// OWNER ONLY. Who bought and sold how much in a day / week / month,
+/// one card per munshi.
 class StaffSummaryScreen extends ConsumerStatefulWidget {
   const StaffSummaryScreen({super.key});
 
@@ -17,33 +26,24 @@ class StaffSummaryScreen extends ConsumerStatefulWidget {
 }
 
 class _StaffSummaryScreenState extends ConsumerState<StaffSummaryScreen> {
-  late DateTime _day = _today();
+  HistoryPeriod _period = HistoryPeriod.day;
+  DateTime _start = periodStart(HistoryPeriod.day, DateTime.now());
 
-  static DateTime _today() {
-    final n = DateTime.now();
-    return DateTime(n.year, n.month, n.day);
-  }
+  bool get _isCurrent => !_start.isBefore(periodStart(_period, DateTime.now()));
 
-  bool get _isToday => _day == _today();
+  void _setPeriod(HistoryPeriod p) => setState(() {
+        _period = p;
+        _start = periodStart(p, _start);
+      });
 
-  void _move(int n) => setState(() => _day = DateTime(_day.year, _day.month, _day.day + n));
-
-  Future<void> _pick() async {
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: _day,
-      firstDate: DateTime(2020),
-      lastDate: _today(),
-    );
-    if (picked != null) setState(() => _day = DateTime(picked.year, picked.month, picked.day));
-  }
+  void _move(int n) => setState(() => _start = shiftPeriod(_period, _start, n));
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final key = dayKey(_day);
-    final purchases = ref.watch(purchasesForDayProvider(key));
-    final sales = ref.watch(salesForDayProvider(key));
+    final range = (from: dayKey(_start), to: dayKey(periodEnd(_period, _start)));
+    final purchases = ref.watch(purchasesRangeProvider(range));
+    final sales = ref.watch(salesRangeProvider(range));
     final names = ref.watch(staffNamesProvider);
 
     return Scaffold(
@@ -51,39 +51,47 @@ class _StaffSummaryScreenState extends ConsumerState<StaffSummaryScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          SegmentedButton<HistoryPeriod>(
+            segments: const [
+              ButtonSegment(value: HistoryPeriod.day, label: Text('Din')),
+              ButtonSegment(value: HistoryPeriod.week, label: Text('Hafta')),
+              ButtonSegment(value: HistoryPeriod.month, label: Text('Mahina')),
+            ],
+            selected: {_period},
+            onSelectionChanged: (s) => _setPeriod(s.first),
+          ),
+          const SizedBox(height: 8),
           Row(
             children: [
               IconButton(
-                tooltip: 'Pichla din',
+                tooltip: 'Pichla',
                 icon: const Icon(Icons.chevron_left),
                 onPressed: () => _move(-1),
               ),
               Expanded(
-                child: TextButton(
-                  onPressed: _pick,
-                  child: Text(
-                    _isToday ? 'Aaj ($key)' : key,
-                    style: theme.textTheme.titleMedium,
-                  ),
+                child: Text(
+                  _label(_period, _start),
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.titleMedium,
                 ),
               ),
               IconButton(
-                tooltip: 'Agla din',
+                tooltip: 'Agla',
                 icon: const Icon(Icons.chevron_right),
-                onPressed: _isToday ? null : () => _move(1),
+                onPressed: _isCurrent ? null : () => _move(1),
               ),
             ],
           ),
           const SizedBox(height: 8),
-          if (purchases.isLoading || sales.isLoading)
-            const Padding(
-              padding: EdgeInsets.all(32),
-              child: Center(child: CircularProgressIndicator()),
-            )
-          else if (purchases.hasError || sales.hasError)
+          if (purchases.hasError || sales.hasError)
             const Padding(
               padding: EdgeInsets.all(32),
               child: Center(child: Text('Something went wrong. Please try again.')),
+            )
+          else if (!purchases.hasValue || !sales.hasValue)
+            const Padding(
+              padding: EdgeInsets.all(32),
+              child: Center(child: CircularProgressIndicator()),
             )
           else ...[
             if (names.isEmpty)
@@ -108,7 +116,7 @@ class _StaffSummaryScreenState extends ConsumerState<StaffSummaryScreen> {
                       if (r.isEmpty)
                         const Padding(
                           padding: EdgeInsets.only(top: 4),
-                          child: Text('Is din koi entry nahi.'),
+                          child: Text('Is muddat mein koi entry nahi.'),
                         )
                       else ...[
                         const SizedBox(height: 4),
@@ -129,9 +137,7 @@ class _StaffSummaryScreenState extends ConsumerState<StaffSummaryScreen> {
   Widget _line(ThemeData theme, String label, int slips, int grams, int amount) {
     return Row(
       children: [
-        Expanded(
-          child: Text('$label  •  $slips slip  •  ${formatKg(grams)}'),
-        ),
+        Expanded(child: Text('$label  •  $slips slip  •  ${formatKg(grams)}')),
         Text(
           formatRs(amount),
           style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),

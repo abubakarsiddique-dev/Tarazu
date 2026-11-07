@@ -52,12 +52,6 @@ class MunshiHomeScreen extends ConsumerWidget {
             icon: const Icon(Icons.local_shipping_outlined),
             label: const Text(SaleStrings.newSale),
           ),
-          const SizedBox(height: 12),
-          OutlinedButton.icon(
-            onPressed: () => context.push(Routes.stock),
-            icon: const Icon(Icons.inventory_2_outlined),
-            label: const Text(AppStrings.stock),
-          ),
           if (kMunshiSeesOwnTodayList) ...[
             const SizedBox(height: 24),
             Text('Meri purchases', style: theme.textTheme.titleMedium),
