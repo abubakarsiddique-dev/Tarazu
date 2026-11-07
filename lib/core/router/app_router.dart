@@ -59,6 +59,9 @@ const _ownerOnlyPages = [
   Routes.sales,
   Routes.materials,
   Routes.staffSummary,
+  // Routes.staff, Routes.report, Routes.profit, Routes.expenses,
+  // Routes.history, Routes.sales, Routes.materials, Routes.staffSummary,
+  Routes.stock,
 ];
 
 /// Redirect rules, extracted so they can be unit tested.
