@@ -54,6 +54,7 @@ List<LedgerEvent> _adjustmentEvents(_Docs docs) {
     if (id.isEmpty || delta == 0) continue;
     final reasonStr = m['reason'] as String?;
     final reason = AdjustmentReason.values.where((r) => r.name == reasonStr).firstOrNull;
+    final costPerKg = (m['costPerKg'] as num?)?.toDouble() ?? 0.0;
     out.add(LedgerEvent(
       kind: LedgerKind.adjustment,
       at: _at(m),
@@ -62,6 +63,7 @@ List<LedgerEvent> _adjustmentEvents(_Docs docs) {
       materialName: m['materialName'] as String? ?? '',
       grams: delta,
       reason: reason,
+      costPerKg: costPerKg,
     ));
   }
   return out;

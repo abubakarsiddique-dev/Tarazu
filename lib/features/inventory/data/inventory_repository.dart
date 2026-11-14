@@ -346,6 +346,8 @@ class InventoryRepository {
 
   /// [deltaGrams] > 0 adds to stock, < 0 removes. The adjustment is kept as a
   /// permanent record; to undo one, make another adjustment.
+  /// For [AdjustmentReason.openingStock], [deltaGrams] must be > 0 and
+  /// [costPerKg] must be provided (non-negative).
   void adjustStock({
     required String shopId,
     required String uid,
@@ -354,21 +356,25 @@ class InventoryRepository {
     required int deltaGrams,
     required AdjustmentReason reason,
     String note = '',
+    double? costPerKg,
   }) {
     if (deltaGrams == 0) return;
     final now = DateTime.now();
     final shop = _shop(shopId);
+    final data = <String, Object?>{
+      'materialId': materialId,
+      'materialName': materialName,
+      'deltaGrams': deltaGrams,
+      'reason': reason.name,
+      'note': note.trim(),
+      'dayKey': dayKey(now),
+      'createdAt': Timestamp.fromDate(now),
+      'createdBy': uid,
+      if (reason == AdjustmentReason.openingStock && costPerKg != null)
+        'costPerKg': costPerKg,
+    };
     final batch = _db.batch()
-      ..set(shop.collection('adjustments').doc(), {
-        'materialId': materialId,
-        'materialName': materialName,
-        'deltaGrams': deltaGrams,
-        'reason': reason.name,
-        'note': note.trim(),
-        'dayKey': dayKey(now),
-        'createdAt': Timestamp.fromDate(now),
-        'createdBy': uid,
-      })
+      ..set(shop.collection('adjustments').doc(), data)
       ..set(shop.collection('stock').doc(materialId), {
         'materialName': materialName,
         'weightGrams': FieldValue.increment(deltaGrams),

@@ -24,6 +24,7 @@ class LedgerEvent {
     required this.grams,
     this.amount = 0,
     this.reason,
+    this.costPerKg = 0,
   });
 
   final LedgerKind kind;
@@ -39,6 +40,10 @@ class LedgerEvent {
   final int amount;
 
   final AdjustmentReason? reason;
+
+  /// Only meaningful for openingStock adjustments: the cost per gram (Rs/g).
+  /// Stored as Rs/kg in Firestore and converted when building the event.
+  final double costPerKg;
 }
 
 class MaterialProfit {
@@ -164,8 +169,17 @@ ProfitReport computeProfit(
         }
       case LedgerKind.adjustment:
         if (e.grams > 0) {
-          st.cost += st.avg * e.grams;
-          st.grams += e.grams;
+          if (e.reason == AdjustmentReason.openingStock) {
+            // Treat like a purchase in the moving average: seed weight at the
+            // given cost. Does NOT count toward purchase totals or acc.sales.
+            final totalCost = e.costPerKg * e.grams / 1000;
+            st.cost += totalCost;
+            st.grams += e.grams;
+            if (e.grams > 0) st.lastRate = e.costPerKg / 1000;
+          } else {
+            st.cost += st.avg * e.grams;
+            st.grams += e.grams;
+          }
         } else if (e.grams < 0) {
           final n = -e.grams;
           final c = st.avg * n;
