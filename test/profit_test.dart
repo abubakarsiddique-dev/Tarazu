@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tarazu/features/finance/domain/profit.dart';
+import 'package:tarazu/features/inventory/domain/sale_models.dart' show AdjustmentReason;
 
 LedgerEvent _e(
   LedgerKind kind,
@@ -8,6 +9,7 @@ LedgerEvent _e(
   String id,
   int grams, [
   int amount = 0,
+  AdjustmentReason? reason,
 ]) =>
     LedgerEvent(
       kind: kind,
@@ -17,6 +19,7 @@ LedgerEvent _e(
       materialName: id[0].toUpperCase() + id.substring(1),
       grams: grams,
       amount: amount,
+      reason: reason,
     );
 
 void main() {
@@ -101,5 +104,75 @@ void main() {
     expect(r.materials, isEmpty);
     expect(r.netProfit(0), 0);
     expect(r.stockCostNow, 0);
+  });
+
+  test('garbage removal counts as stock loss at current average cost and tracks garbage weight and cost', () {
+    final r = computeProfit([
+      _e(LedgerKind.purchase, 1, '2026-11-01', 'iron', 20000, 800), // Rs 40/kg
+      _e(LedgerKind.adjustment, 2, '2026-11-01', 'iron', -2000, 0, AdjustmentReason.garbage), // 2 kg garbage -> Rs 80 loss
+      _e(LedgerKind.sale, 3, '2026-11-01', 'iron', 10000, 500), // 10 kg sold -> cost 400, sales 500
+    ], from: '2026-11-01', to: '2026-11-01');
+
+    final iron = r.materials.single;
+    expect(iron.soldGrams, 10000);
+    expect(iron.salesAmount, 500);
+    expect(iron.cost, 400);
+    expect(iron.profit, 100);
+    expect(iron.lossCost, 80);
+    expect(iron.garbageGrams, 2000);
+    expect(iron.garbageCost, 80);
+
+    expect(r.salesAmount, 500);
+    expect(r.cost, 400);
+    expect(r.grossProfit, 100);
+    expect(r.lossCost, 80);
+    expect(r.garbageGrams, 2000);
+    expect(r.garbageCost, 80);
+    expect(r.netProfit(0), 20); // 100 - 80
+    expect(r.stockCostNow, 320); // 8 kg left @ Rs 40/kg
+  });
+
+  test('garbage removal with no sales still appears in report as loss', () {
+    final r = computeProfit([
+      _e(LedgerKind.purchase, 1, '2026-11-01', 'brass', 10000, 1000), // Rs 100/kg
+      _e(LedgerKind.adjustment, 2, '2026-11-01', 'brass', -1000, 0, AdjustmentReason.garbage), // 1 kg garbage -> Rs 100 loss
+    ], from: '2026-11-01', to: '2026-11-01');
+
+    expect(r.materials.length, 1);
+    final brass = r.materials.single;
+    expect(brass.soldGrams, 0);
+    expect(brass.salesAmount, 0);
+    expect(brass.cost, 0);
+    expect(brass.profit, 0);
+    expect(brass.lossCost, 100);
+    expect(brass.garbageGrams, 1000);
+    expect(brass.garbageCost, 100);
+
+    expect(r.grossProfit, 0);
+    expect(r.lossCost, 100);
+    expect(r.netProfit(0), -100);
+    expect(r.stockCostNow, 900);
+  });
+
+  test('garbage removal outside period affects stock cost but is excluded from period garbage and loss', () {
+    final r = computeProfit([
+      _e(LedgerKind.purchase, 1, '2026-11-01', 'iron', 10000, 400),
+      _e(LedgerKind.adjustment, 2, '2026-11-02', 'iron', -2000, 0, AdjustmentReason.garbage),
+      _e(LedgerKind.sale, 3, '2026-11-03', 'iron', 5000, 300),
+    ], from: '2026-11-03', to: '2026-11-03');
+
+    final iron = r.materials.single;
+    expect(iron.soldGrams, 5000);
+    expect(iron.salesAmount, 300);
+    expect(iron.cost, 200);
+    expect(iron.profit, 100);
+    expect(iron.lossCost, 0);
+    expect(iron.garbageGrams, 0);
+    expect(iron.garbageCost, 0);
+
+    expect(r.lossCost, 0);
+    expect(r.garbageGrams, 0);
+    expect(r.garbageCost, 0);
+    expect(r.stockCostNow, 120); // 3 kg left @ Rs 40/kg
   });
 }
