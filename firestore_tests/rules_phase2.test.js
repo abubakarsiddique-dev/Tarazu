@@ -139,12 +139,21 @@ test('adjusting a material with no stock doc yet (adding weight) is accepted', a
   await assertSucceeds(b.commit());
 });
 
+test('adjustStock with reason garbage is accepted for the owner', async () => {
+  const db = alice();
+  const b = writeBatch(db);
+  b.set(doc(db, 'shops/s1/adjustments/a_garbage'), adjustment({ reason: 'garbage', deltaGrams: -1500, note: 'dirt' }));
+  b.set(doc(db, 'shops/s1/stock/iron'), { materialName: 'Iron', weightGrams: increment(-1500) }, { merge: true });
+  await assertSucceeds(b.commit());
+});
+
 test('bad adjustments are rejected', async () => {
   const add = (o) => setDoc(doc(alice(), 'shops/s1/adjustments/x'), adjustment(o));
   await assertFails(add({ deltaGrams: 0 }));
   await assertFails(add({ deltaGrams: 1.5 }));
   await assertFails(add({ deltaGrams: 200000000 }));
   await assertFails(add({ reason: 'gift' }));
+  await assertFails(add({ reason: 'invalid_reason' }));
   await assertFails(add({ note: 'x'.repeat(201) }));
   await assertFails(add({ createdBy: 'bob' }));
   await assertFails(add({ extra: 1 }));
