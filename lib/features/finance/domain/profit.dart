@@ -10,6 +10,8 @@
 /// Cancelled (voided) slips are left out before this function is called.
 library;
 
+import '../../inventory/domain/sale_models.dart' show AdjustmentReason;
+
 enum LedgerKind { purchase, adjustment, sale }
 
 class LedgerEvent {
@@ -21,6 +23,7 @@ class LedgerEvent {
     required this.materialName,
     required this.grams,
     this.amount = 0,
+    this.reason,
   });
 
   final LedgerKind kind;
@@ -34,6 +37,8 @@ class LedgerEvent {
 
   /// purchase / sale: money paid / received. adjustment: 0.
   final int amount;
+
+  final AdjustmentReason? reason;
 }
 
 class MaterialProfit {
@@ -45,6 +50,8 @@ class MaterialProfit {
     required this.cost,
     required this.lossCost,
     required this.noCostGrams,
+    this.garbageGrams = 0,
+    this.garbageCost = 0,
   });
 
   final String materialId;
@@ -56,6 +63,9 @@ class MaterialProfit {
 
   /// Grams sold while the app had no buying record for this material.
   final int noCostGrams;
+
+  final int garbageGrams;
+  final int garbageCost;
 
   int get profit => salesAmount - cost;
 
@@ -83,6 +93,8 @@ class ProfitReport {
   int get cost => materials.fold(0, (s, m) => s + m.cost);
   int get lossCost => materials.fold(0, (s, m) => s + m.lossCost);
   int get noCostGrams => materials.fold(0, (s, m) => s + m.noCostGrams);
+  int get garbageGrams => materials.fold(0, (s, m) => s + m.garbageGrams);
+  int get garbageCost => materials.fold(0, (s, m) => s + m.garbageCost);
   int get grossProfit => salesAmount - cost;
 
   int netProfit(int expenses) => grossProfit - lossCost - expenses;
@@ -109,6 +121,8 @@ class _Acc {
   double cost = 0;
   double loss = 0;
   int noCost = 0;
+  int garbageGrams = 0;
+  double garbageCost = 0;
 }
 
 ProfitReport computeProfit(
@@ -156,7 +170,13 @@ ProfitReport computeProfit(
           final n = -e.grams;
           final c = st.avg * n;
           st.take(n, c);
-          if (counts) acc.loss += c;
+          if (counts) {
+            acc.loss += c;
+            if (e.reason == AdjustmentReason.garbage) {
+              acc.garbageGrams += n;
+              acc.garbageCost += c;
+            }
+          }
         }
     }
   }
@@ -172,6 +192,8 @@ ProfitReport computeProfit(
       cost: a.cost.round(),
       lossCost: a.loss.round(),
       noCostGrams: a.noCost,
+      garbageGrams: a.garbageGrams,
+      garbageCost: a.garbageCost.round(),
     ));
   });
   rows.sort((a, b) => b.profit.compareTo(a.profit));

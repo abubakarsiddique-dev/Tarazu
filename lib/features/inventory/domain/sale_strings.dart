@@ -36,4 +36,5 @@ class SaleStrings {
   static const reasonCorrection = 'Correction';
   static const reasonLoss = 'Loss / waste';
   static const reasonOther = 'Other';
+  static const reasonGarbage = 'Garbage';
 }

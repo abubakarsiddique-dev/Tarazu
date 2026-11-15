@@ -215,6 +215,8 @@ class _MaterialCard extends StatelessWidget {
       '${FinanceStrings.sold} ${formatKg(m.soldGrams)}',
       '${FinanceStrings.sales} ${formatRs(m.salesAmount)}',
       '${FinanceStrings.cost} ${formatRs(m.cost)}',
+      if (m.garbageGrams > 0)
+        '${FinanceStrings.garbage} ${formatKg(m.garbageGrams)} (${formatRs(m.garbageCost)})',
       if (m.lossCost > 0) '${FinanceStrings.stockLoss} ${formatRs(m.lossCost)}',
     ];
     return Card(

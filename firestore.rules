@@ -260,7 +260,7 @@ service cloud.firestore {
           && request.resource.data.deltaGrams != 0
           && request.resource.data.deltaGrams >= -100000000
           && request.resource.data.deltaGrams <= 100000000
-          && request.resource.data.reason in ['correction','loss','other']
+          && request.resource.data.reason in ['correction','loss','other','garbage']
           && request.resource.data.note is string
           && request.resource.data.note.size() <= 200
           && request.resource.data.createdAt is timestamp

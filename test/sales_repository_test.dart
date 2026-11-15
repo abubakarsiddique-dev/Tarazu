@@ -118,6 +118,26 @@ void main() {
       expect(rec['createdBy'], 'u1');
     });
 
+    test('removing weight with garbage reason lowers stock and preserves purchases and daily totals', () async {
+      repo.adjustStock(
+        shopId: 's1', uid: 'u1', materialId: 'iron', materialName: 'Iron',
+        deltaGrams: -3000, reason: AdjustmentReason.garbage, note: '  dirt and stones ',
+      );
+      await settle();
+
+      expect(await stockOf('iron'), 17000);
+      final rec = (await db.collection('shops/s1/adjustments').get()).docs.single.data();
+      expect(rec['deltaGrams'], -3000);
+      expect(rec['reason'], 'garbage');
+      expect(rec['note'], 'dirt and stones'); // trimmed
+      expect(rec['createdBy'], 'u1');
+
+      final bought = (await db.doc('shops/s1/daily/$today').get()).data()!;
+      expect(bought['totalAmount'], 800);
+      expect(bought['totalWeightGrams'], 20000);
+      expect(bought['entryCount'], 1);
+    });
+
     test('adding weight raises stock, even for a material with no stock yet', () async {
       repo.adjustStock(
         shopId: 's1', uid: 'u1', materialId: 'copper', materialName: 'Copper',

@@ -129,10 +129,12 @@ class _AdjustDialogState extends State<_AdjustDialog> {
         AdjustmentReason.correction => SaleStrings.reasonCorrection,
         AdjustmentReason.loss => SaleStrings.reasonLoss,
         AdjustmentReason.other => SaleStrings.reasonOther,
+        AdjustmentReason.garbage => SaleStrings.reasonGarbage,
       };
 
   void _save() {
     if (!_form.currentState!.validate()) return;
+    if (_add && _reason == AdjustmentReason.garbage) return;
     final grams = (parseNumber(_weight.text)! * 1000).round();
     Navigator.of(context).pop((
       deltaGrams: _add ? grams : -grams,
@@ -144,6 +146,9 @@ class _AdjustDialogState extends State<_AdjustDialog> {
   @override
   Widget build(BuildContext context) {
     final current = widget.item.weightGrams;
+    final reasons = _add
+        ? AdjustmentReason.values.where((r) => r != AdjustmentReason.garbage).toList()
+        : AdjustmentReason.values;
     return AlertDialog(
       title: Text('${SaleStrings.adjustStock}: ${widget.item.materialName}'),
       content: SingleChildScrollView(
@@ -161,7 +166,12 @@ class _AdjustDialogState extends State<_AdjustDialog> {
                   ButtonSegment(value: false, label: Text(SaleStrings.adjustRemove)),
                 ],
                 selected: {_add},
-                onSelectionChanged: (s) => setState(() => _add = s.first),
+                onSelectionChanged: (s) => setState(() {
+                  _add = s.first;
+                  if (_add && _reason == AdjustmentReason.garbage) {
+                    _reason = AdjustmentReason.correction;
+                  }
+                }),
               ),
               const SizedBox(height: 12),
               TextFormField(
@@ -181,7 +191,7 @@ class _AdjustDialogState extends State<_AdjustDialog> {
               Wrap(
                 spacing: 8,
                 children: [
-                  for (final r in AdjustmentReason.values)
+                  for (final r in reasons)
                     ChoiceChip(
                       label: Text(_label(r)),
                       selected: _reason == r,
