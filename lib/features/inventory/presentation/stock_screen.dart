@@ -13,7 +13,7 @@ import '../domain/sale_models.dart';
 import '../domain/sale_strings.dart';
 import '../../auth/application/auth_providers.dart';
 
-typedef _Adjustment = ({int deltaGrams, AdjustmentReason reason, String note});
+typedef _Adjustment = ({int deltaGrams, AdjustmentReason reason, String note, double? costPerKg});
 
 class StockScreen extends ConsumerWidget {
   const StockScreen({super.key});
@@ -30,6 +30,7 @@ class StockScreen extends ConsumerWidget {
           deltaGrams: result.deltaGrams,
           reason: result.reason,
           note: result.note,
+          costPerKg: result.costPerKg,
         );
   }
 
@@ -115,6 +116,7 @@ class _AdjustDialogState extends State<_AdjustDialog> {
   final _form = GlobalKey<FormState>();
   final _weight = TextEditingController();
   final _note = TextEditingController();
+  final _cost = TextEditingController();
   bool _add = true;
   AdjustmentReason _reason = AdjustmentReason.correction;
 
@@ -122,6 +124,7 @@ class _AdjustDialogState extends State<_AdjustDialog> {
   void dispose() {
     _weight.dispose();
     _note.dispose();
+    _cost.dispose();
     super.dispose();
   }
 
@@ -130,16 +133,23 @@ class _AdjustDialogState extends State<_AdjustDialog> {
         AdjustmentReason.loss => SaleStrings.reasonLoss,
         AdjustmentReason.other => SaleStrings.reasonOther,
         AdjustmentReason.garbage => SaleStrings.reasonGarbage,
+        AdjustmentReason.openingStock => SaleStrings.reasonOpeningStock,
       };
 
   void _save() {
     if (!_form.currentState!.validate()) return;
     if (_add && _reason == AdjustmentReason.garbage) return;
+    if (!_add && _reason == AdjustmentReason.openingStock) return;
     final grams = (parseNumber(_weight.text)! * 1000).round();
+    double? costPerKg;
+    if (_reason == AdjustmentReason.openingStock) {
+      costPerKg = parseNumber(_cost.text);
+    }
     Navigator.of(context).pop((
       deltaGrams: _add ? grams : -grams,
       reason: _reason,
       note: _note.text,
+      costPerKg: costPerKg,
     ));
   }
 

@@ -37,4 +37,6 @@ class SaleStrings {
   static const reasonLoss = 'Loss / waste';
   static const reasonOther = 'Other';
   static const reasonGarbage = 'Garbage';
+  static const reasonOpeningStock = 'Opening stock';
+  static const costPerKgLabel = 'Cost per kg (Rs)';
 }
