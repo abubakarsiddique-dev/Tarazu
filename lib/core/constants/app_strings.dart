@@ -21,6 +21,10 @@ class AppStrings {
   static const login = 'Login';
   static const register = 'Create account';
   static const logout = 'Logout';
+  static const logoutConfirmTitle = 'Logout?';
+  static const logoutConfirmBody = 'Are you sure you want to log out?';
+  static const logoutPendingSyncWarning =
+      'Some entries are still waiting to sync. They may not upload until you log in again on this phone.';
   static const email = 'Email';
   static const password = 'Password';
   static const confirmPassword = 'Confirm password';
@@ -84,6 +88,8 @@ class AppStrings {
   static const keep = 'Keep';
   static const waitingToSync = 'Waiting for internet to sync';
   static const synced = 'Synced';
+  static const todayPurchasesSynced = 'Aaj ki purchases synced';
+  static const syncRemainingSuffix = 'sync baqi';
   static const invalidNumber = 'Enter a valid number';
 
   // Purchase slip
@@ -108,6 +114,15 @@ class AppStrings {
   static const items = 'items';
   static const seller = 'Seller';
   static const close = 'Close';
+  static const editItem = 'Item edit karein';
+  static const updateItem = 'Item update karein';
+  static const cancelEdit = 'Edit cancel';
+  static const itemRemoved = 'Item slip se hata diya';
+  static const undo = 'Wapas laayein';
+  static const discardSlipTitle = 'Slip discard karein?';
+  static const discardSlipBody =
+      'Is slip ke items abhi save nahi huay. Bahar jaane se yeh khatam ho jayenge.';
+  static const discardSlipAction = 'Discard karein';
 
   // Shop details / sharing
   static const shopPhone = 'Shop phone number';

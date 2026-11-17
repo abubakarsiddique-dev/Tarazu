@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/app_strings.dart';
+import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/primary_button.dart';
 import '../application/onboarding_provider.dart';
 
 class OnboardingScreen extends ConsumerStatefulWidget {
@@ -13,9 +15,21 @@ class OnboardingScreen extends ConsumerStatefulWidget {
 
 class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   static const _slides = <({IconData icon, String title, String body})>[
-    (icon: Icons.edit_note, title: AppStrings.onb1Title, body: AppStrings.onb1Body),
-    (icon: Icons.cloud_off, title: AppStrings.onb2Title, body: AppStrings.onb2Body),
-    (icon: Icons.inventory_2, title: AppStrings.onb3Title, body: AppStrings.onb3Body),
+    (
+      icon: Icons.edit_note,
+      title: AppStrings.onb1Title,
+      body: AppStrings.onb1Body,
+    ),
+    (
+      icon: Icons.cloud_off,
+      title: AppStrings.onb2Title,
+      body: AppStrings.onb2Body,
+    ),
+    (
+      icon: Icons.inventory_2,
+      title: AppStrings.onb3Title,
+      body: AppStrings.onb3Body,
+    ),
   ];
 
   final _controller = PageController();
@@ -30,7 +44,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   }
 
   /// Saving the flag changes session state; the router then moves to Login.
-  Future<void> _finish() => ref.read(onboardingSeenProvider.notifier).complete();
+  Future<void> _finish() =>
+      ref.read(onboardingSeenProvider.notifier).complete();
 
   void _next() {
     if (_isLast) {
@@ -50,11 +65,17 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton(
-                onPressed: _isLast ? null : _finish,
-                child: const Text(AppStrings.skip),
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.sm,
+                vertical: AppSpacing.xs,
+              ),
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  onPressed: _isLast ? null : _finish,
+                  child: const Text(AppStrings.skip),
+                ),
               ),
             ),
             Expanded(
@@ -64,21 +85,57 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 onPageChanged: (i) => setState(() => _page = i),
                 itemBuilder: (context, i) {
                   final s = _slides[i];
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 32),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(s.icon, size: 120, color: theme.colorScheme.primary),
-                        const SizedBox(height: 32),
-                        Text(
-                          s.title,
-                          textAlign: TextAlign.center,
-                          style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+                  return LayoutBuilder(
+                    builder: (context, constraints) => SingleChildScrollView(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.xl,
+                        vertical: AppSpacing.lg,
+                      ),
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(
+                          minHeight: constraints.maxHeight - AppSpacing.xl,
                         ),
-                        const SizedBox(height: 12),
-                        Text(s.body, textAlign: TextAlign.center, style: theme.textTheme.bodyLarge),
-                      ],
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Container(
+                              width: 112,
+                              height: 112,
+                              decoration: BoxDecoration(
+                                color: AppColors.primaryContainer,
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: AppColors.primary.withValues(
+                                    alpha: 0.25,
+                                  ),
+                                  width: 1.5,
+                                ),
+                              ),
+                              child: Icon(
+                                s.icon,
+                                size: 56,
+                                color: AppColors.primary,
+                              ),
+                            ),
+                            const SizedBox(height: AppSpacing.xl),
+                            Text(
+                              s.title,
+                              textAlign: TextAlign.center,
+                              style: theme.textTheme.headlineSmall?.copyWith(
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            const SizedBox(height: AppSpacing.md),
+                            Text(
+                              s.body,
+                              textAlign: TextAlign.center,
+                              style: theme.textTheme.bodyLarge?.copyWith(
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   );
                 },
@@ -90,23 +147,24 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 _slides.length,
                 (i) => AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
-                  margin: const EdgeInsets.all(4),
-                  width: i == _page ? 24 : 8,
+                  margin: const EdgeInsets.all(AppSpacing.xs),
+                  width: i == _page ? 28 : 8,
                   height: 8,
                   decoration: BoxDecoration(
-                    color: i == _page
-                        ? theme.colorScheme.primary
-                        : theme.colorScheme.outlineVariant,
-                    borderRadius: BorderRadius.circular(4),
+                    color: i == _page ? AppColors.primary : AppColors.outline,
+                    borderRadius: BorderRadius.circular(AppSpacing.xs),
                   ),
                 ),
               ),
             ),
             Padding(
-              padding: const EdgeInsets.all(24),
-              child: FilledButton(
+              padding: const EdgeInsets.all(AppSpacing.xl),
+              child: PrimaryButton(
+                label: _isLast ? AppStrings.getStarted : AppStrings.next,
+                icon: _isLast
+                    ? Icons.check_circle_outline_rounded
+                    : Icons.arrow_forward_rounded,
                 onPressed: _next,
-                child: Text(_isLast ? AppStrings.getStarted : AppStrings.next),
               ),
             ),
           ],

@@ -4,17 +4,25 @@ import 'package:go_router/go_router.dart';
 import 'package:tarazu/features/staff/presentation/munshi_home_screen.dart';
 
 import '../../../core/constants/app_strings.dart';
-import '../../staff/presentation/staff_summary_screen.dart'; 
 import '../../../core/router/app_router.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/format.dart';
 import '../../../core/utils/validators.dart';
+import '../../../core/widgets/app_card.dart';
+import '../../../core/widgets/empty_state.dart';
+import '../../../core/widgets/error_state.dart';
+import '../../../core/widgets/loading_state.dart';
+import '../../../core/widgets/primary_button.dart';
+import '../../../core/widgets/stat_tile.dart';
+import '../../../core/widgets/sync_status_chip.dart';
 import '../../auth/application/auth_providers.dart';
 import '../../auth/domain/app_user.dart';
+import '../../finance/domain/finance_strings.dart';
 import '../../inventory/application/inventory_providers.dart';
 import '../../inventory/domain/models.dart';
-import '../../inventory/presentation/slip_sheet.dart';
+import '../../inventory/domain/sale_strings.dart';
 import '../../inventory/presentation/report_screen.dart' show ReportStrings;
-import '../../finance/domain/finance_strings.dart';
+import '../../inventory/presentation/slip_sheet.dart';
 import '../../staff/domain/staff_strings.dart';
 import '../../staff/presentation/staff_entry_card.dart';
 
@@ -37,7 +45,11 @@ class HomeScreen extends ConsumerWidget {
             child: const Text(AppStrings.keep),
           ),
           FilledButton(
-            style: FilledButton.styleFrom(minimumSize: const Size(96, 44)),
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.error,
+              foregroundColor: AppColors.onError,
+              minimumSize: const Size(96, 44),
+            ),
             onPressed: () => Navigator.of(ctx).pop(true),
             child: const Text(AppStrings.voidAction),
           ),
@@ -61,17 +73,93 @@ class HomeScreen extends ConsumerWidget {
     ref.read(authRepositoryProvider).updatePhone(user.uid, result);
   }
 
+  Future<void> _confirmLogout(
+    BuildContext context,
+    WidgetRef ref, {
+    required bool hasPendingSync,
+  }) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text(AppStrings.logoutConfirmTitle),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(AppStrings.logoutConfirmBody),
+            if (hasPendingSync) ...[
+              const SizedBox(height: AppSpacing.md),
+              Container(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                decoration: BoxDecoration(
+                  color: AppColors.munshiContainer,
+                  borderRadius: AppRadius.brSm,
+                  border: Border.all(color: AppColors.munshiAccent),
+                ),
+                child: const Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      Icons.warning_amber_rounded,
+                      size: 20,
+                      color: AppColors.munshiAccent,
+                    ),
+                    SizedBox(width: AppSpacing.sm),
+                    Expanded(
+                      child: Text(
+                        AppStrings.logoutPendingSyncWarning,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.onMunshiContainer,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text(AppStrings.cancel),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.error,
+              foregroundColor: AppColors.onError,
+              minimumSize: const Size(96, 44),
+            ),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text(AppStrings.logout),
+          ),
+        ],
+      ),
+    );
+    if (ok == true) {
+      await ref.read(authControllerProvider.notifier).signOut();
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final user = ref.watch(userProfileProvider).value;
     final isOwner = ref.watch(isOwnerProvider);
-     if (user != null && !isOwner) return const MunshiHomeScreen();
+    if (user != null && !isOwner) return const MunshiHomeScreen();
+
     final day = dayKey(DateTime.now());
     final summary =
         ref.watch(dailySummaryProvider(day)).value ??
         const DailySummary.empty();
     final purchases = ref.watch(purchasesForDayProvider(day));
+    final stockAsync = ref.watch(stockProvider);
+
+    final purchaseList = purchases.value ?? const <Purchase>[];
+    final pendingPurchaseCount =
+        purchaseList.where((p) => p.pendingSync).length;
 
     return Scaffold(
       appBar: AppBar(
@@ -86,110 +174,153 @@ class HomeScreen extends ConsumerWidget {
           ),
           IconButton(
             tooltip: AppStrings.logout,
-            icon: const Icon(Icons.logout),
-            onPressed: () =>
-                ref.read(authControllerProvider.notifier).signOut(),
+            icon: const Icon(Icons.logout_rounded),
+            onPressed: () => _confirmLogout(
+              context,
+              ref,
+              hasPendingSync: pendingPurchaseCount > 0,
+            ),
           ),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => context.push(Routes.addPurchase),
-        icon: const Icon(Icons.add),
+        icon: const Icon(Icons.add_rounded),
         label: const Text(AppStrings.addPurchase),
       ),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.lg,
+          AppSpacing.lg,
+          AppSpacing.lg,
+          AppSpacing.fabClearance,
+        ),
         children: [
-          Card(
-            color: theme.colorScheme.primaryContainer,
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(AppStrings.today, style: theme.textTheme.titleMedium),
-                  const SizedBox(height: 8),
-                  Text(
-                    formatRs(summary.totalAmount),
-                    style: theme.textTheme.headlineMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
+          // 1. Today's Purchase Summary Hero Card
+          StatTile(
+            label: AppStrings.today,
+            icon: Icons.today_outlined,
+            value: formatRs(summary.totalAmount),
+            subtitle:
+                '${formatKg(summary.totalWeightGrams)} • ${summary.entryCount} ${AppStrings.entries}',
+            trailing: purchaseList.isEmpty
+                ? null
+                : Flexible(
+                    child: SyncStatusChip(
+                      pendingSync: pendingPurchaseCount > 0,
+                      pendingCount: pendingPurchaseCount,
+                      syncedLabel: AppStrings.todayPurchasesSynced,
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '${formatKg(summary.totalWeightGrams)} • ${summary.entryCount} ${AppStrings.entries}',
-                  ),
-                ],
-              ),
-            ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: AppSpacing.md),
+
+          // 2. Primary Counter Actions: Add Purchase + New Sale side by side
           Row(
             children: [
               Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: () => context.push(Routes.stock),
-                  icon: const Icon(Icons.inventory_2_outlined),
-                  label: const Text(AppStrings.stock),
+                child: PrimaryButton(
+                  label: AppStrings.addPurchase,
+                  icon: Icons.add_rounded,
+                  onPressed: () => context.push(Routes.addPurchase),
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: AppSpacing.sm),
               Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: () => context.push(Routes.materials),
-                  icon: const Icon(Icons.category_outlined),
-                  label: const Text(AppStrings.materials),
+                child: SecondaryButton(
+                  label: SaleStrings.newSale,
+                  icon: Icons.local_shipping_outlined,
+                  onPressed: () => context.push(Routes.newSale),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          OutlinedButton.icon(
-            onPressed: () => context.push(Routes.history),
-            icon: const Icon(Icons.bar_chart),
-            label: const Text(AppStrings.history),
+          const SizedBox(height: AppSpacing.md),
+
+          // 3. Current Stock Summary Card (Owner only, Option B: total kg + top 3 materials)
+          if (isOwner) ...[
+            _StockOverviewCard(
+              stockAsync: stockAsync,
+              onTap: () => context.push(Routes.stock),
+            ),
+            const SizedBox(height: AppSpacing.md),
+          ],
+
+          // 4. Navigation Hub Tiles (2-column flexible rows)
+          _NavRow(
+            left: _NavTile(
+              icon: Icons.inventory_2_outlined,
+              label: AppStrings.stock,
+              onTap: () => context.push(Routes.stock),
+            ),
+            right: _NavTile(
+              icon: Icons.local_shipping_outlined,
+              label: SaleStrings.sales,
+              onTap: () => context.push(Routes.sales),
+            ),
           ),
-                    if (isOwner) ...[
-           const SizedBox(height: 12),
-            OutlinedButton.icon(
-              onPressed: () => context.push(Routes.staffSummary),
-              icon: const Icon(Icons.groups_2_outlined),
-              label: const Text('Munshi hisaab'),
+          const SizedBox(height: AppSpacing.sm),
+          _NavRow(
+            left: _NavTile(
+              icon: Icons.category_outlined,
+              label: AppStrings.materials,
+              onTap: () => context.push(Routes.materials),
             ),
-            const SizedBox(height: 12),
-            OutlinedButton.icon(
-              onPressed: () => context.push(Routes.profit),
-              icon: const Icon(Icons.trending_up),
-              label: const Text(FinanceStrings.profit),
+            right: _NavTile(
+              icon: Icons.history_rounded,
+              label: AppStrings.history,
+              onTap: () => context.push(Routes.history),
             ),
-            const SizedBox(height: 12),
-            OutlinedButton.icon(
-              onPressed: () => context.push(Routes.expenses),
-              icon: const Icon(Icons.receipt_long_outlined),
-              label: const Text(FinanceStrings.expensesTitle),
+          ),
+          if (isOwner) ...[
+            const SizedBox(height: AppSpacing.sm),
+            _NavRow(
+              left: _NavTile(
+                icon: Icons.trending_up_rounded,
+                label: FinanceStrings.profit,
+                onTap: () => context.push(Routes.profit),
+              ),
+              right: _NavTile(
+                icon: Icons.account_balance_wallet_outlined,
+                label: FinanceStrings.expensesTitle,
+                onTap: () => context.push(Routes.expenses),
+              ),
             ),
-            const SizedBox(height: 12),
-            OutlinedButton.icon(
-              onPressed: () => context.push(Routes.staff),
-              icon: const Icon(Icons.group),
-              label: const Text(StaffStrings.title),
+            const SizedBox(height: AppSpacing.sm),
+            _NavRow(
+              left: _NavTile(
+                icon: Icons.bar_chart_rounded,
+                label: ReportStrings.title,
+                onTap: () => context.push(Routes.report),
+              ),
+              right: _NavTile(
+                icon: Icons.groups_2_outlined,
+                label: StaffStrings.munshiHisaab,
+                onTap: () => context.push(Routes.staffSummary),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            _NavTile(
+              icon: Icons.manage_accounts_outlined,
+              label: StaffStrings.title,
+              onTap: () => context.push(Routes.staff),
             ),
           ],
 
-          const SizedBox(height: 24),
+          // 5. Today's Purchases List
+          const SizedBox(height: AppSpacing.xl),
           Text(AppStrings.purchasesToday, style: theme.textTheme.titleMedium),
-          const SizedBox(height: 8),
+          const StaffLegend(),
+          const SizedBox(height: AppSpacing.sm),
           purchases.when(
-            loading: () => const Padding(
-              padding: EdgeInsets.all(24),
-              child: Center(child: CircularProgressIndicator()),
-            ),
-            error: (_, _) => const Text(AppStrings.errGeneric),
+            loading: () => const LoadingState(compact: true),
+            error: (_, _) => const ErrorState(compact: true),
             data: (list) {
               if (list.isEmpty) {
-                return const Padding(
-                  padding: EdgeInsets.all(24),
-                  child: Center(child: Text(AppStrings.noPurchasesToday)),
+                return const EmptyState(
+                  icon: Icons.receipt_long_outlined,
+                  message: AppStrings.noPurchasesToday,
+                  compact: true,
                 );
               }
               return Column(
@@ -206,37 +337,29 @@ class HomeScreen extends ConsumerWidget {
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Tooltip(
-                              message: p.pendingSync
-                                  ? AppStrings.waitingToSync
-                                  : AppStrings.synced,
-                              child: Icon(
-                                p.pendingSync
-                                    ? Icons.cloud_off
-                                    : Icons.cloud_done_outlined,
-                                size: 18,
-                                color: p.pendingSync
-                                    ? theme.colorScheme.error
-                                    : theme.colorScheme.outline,
-                              ),
+                            SyncStatusChip(
+                              pendingSync: p.pendingSync,
+                              compact: true,
                             ),
-                            const SizedBox(width: 8),
+                            const SizedBox(width: AppSpacing.sm),
                             Text(
                               formatRs(p.totalAmount),
-                              style: theme.textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
+                              style: AppTextStyles.cardAmount,
                             ),
                           ],
                         ),
                         onTap: () => showSlipSheet(
                           context,
                           p,
-                          onVoid: isOwner ? () => _confirmVoid(context, ref, p) : null,
+                          onVoid: isOwner
+                              ? () => _confirmVoid(context, ref, p)
+                              : null,
                           shopName: user?.shopName ?? '',
                           shopPhone: user?.phone ?? '',
                         ),
-                        onLongPress: isOwner ? () => _confirmVoid(context, ref, p) : null,
+                        onLongPress: isOwner
+                            ? () => _confirmVoid(context, ref, p)
+                            : null,
                       ),
                     ),
                 ],
@@ -244,6 +367,212 @@ class HomeScreen extends ConsumerWidget {
             },
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Shows total stock weight and top 3 materials by weight (Option B).
+class _StockOverviewCard extends StatelessWidget {
+  const _StockOverviewCard({
+    required this.stockAsync,
+    required this.onTap,
+  });
+
+  final AsyncValue<List<StockItem>> stockAsync;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return stockAsync.when(
+      loading: () => const AppCard(
+        padding: EdgeInsets.all(AppSpacing.lg),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(strokeWidth: 2.5),
+            ),
+            SizedBox(width: AppSpacing.md),
+            Text(AppStrings.stock),
+          ],
+        ),
+      ),
+      error: (_, _) => AppCard(
+        onTap: onTap,
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        child: Row(
+          children: [
+            const Icon(Icons.error_outline_rounded, color: AppColors.error),
+            const SizedBox(width: AppSpacing.sm),
+            const Expanded(child: Text(AppStrings.errGeneric)),
+          ],
+        ),
+      ),
+      data: (items) {
+        final totalGrams =
+            items.fold<int>(0, (sum, item) => sum + item.weightGrams);
+        final topThree = ([...items]
+              ..sort((a, b) => b.weightGrams.compareTo(a.weightGrams)))
+            .where((i) => i.weightGrams > 0)
+            .take(3)
+            .toList();
+
+        return AppCard(
+          backgroundColor: AppColors.secondaryContainer,
+          borderColor: AppColors.secondary.withValues(alpha: 0.3),
+          onTap: onTap,
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(
+                    Icons.inventory_2_outlined,
+                    size: 20,
+                    color: AppColors.onSecondaryContainer,
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: Text(
+                      AppStrings.totalStock,
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        color: AppColors.onSecondaryContainer,
+                      ),
+                    ),
+                  ),
+                  Text(
+                    formatKg(totalGrams),
+                    style: AppTextStyles.statNumber.copyWith(
+                      color: AppColors.onSecondaryContainer,
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.xs),
+                  const Icon(
+                    Icons.chevron_right_rounded,
+                    size: 20,
+                    color: AppColors.onSecondaryContainer,
+                  ),
+                ],
+              ),
+              if (topThree.isEmpty) ...[
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  AppStrings.noStockYet,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: AppColors.onSecondaryContainer.withValues(
+                      alpha: 0.85,
+                    ),
+                  ),
+                ),
+              ] else ...[
+                const SizedBox(height: AppSpacing.sm),
+                Wrap(
+                  spacing: AppSpacing.sm,
+                  runSpacing: AppSpacing.xs,
+                  children: [
+                    for (final item in topThree)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.sm + 2,
+                          vertical: AppSpacing.xs,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.surfaceCard,
+                          borderRadius: AppRadius.brSm,
+                          border: Border.all(color: AppColors.outline),
+                        ),
+                        child: Text(
+                          '${item.materialName}: ${formatKg(item.weightGrams)}',
+                          style: AppTextStyles.badge.copyWith(
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ],
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _NavRow extends StatelessWidget {
+  const _NavRow({required this.left, required this.right});
+
+  final Widget left;
+  final Widget right;
+
+  @override
+  Widget build(BuildContext context) {
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(child: left),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(child: right),
+        ],
+      ),
+    );
+  }
+}
+
+class _NavTile extends StatelessWidget {
+  const _NavTile({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      margin: EdgeInsets.zero,
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.md,
+      ),
+      onTap: onTap,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(
+          minHeight: AppSpacing.minTapTarget - 16,
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: const BoxDecoration(
+                color: AppColors.primaryContainer,
+                borderRadius: AppRadius.brSm,
+              ),
+              child: Icon(icon, size: 20, color: AppColors.primary),
+            ),
+            const SizedBox(width: AppSpacing.sm + 2),
+            Expanded(
+              child: Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary,
+                  height: 1.2,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -293,17 +622,14 @@ class _ShopDetailsDialogState extends State<_ShopDetailsDialog> {
               controller: _phone,
               autofocus: true,
               keyboardType: TextInputType.phone,
+              onFieldSubmitted: (_) => _submit(),
               decoration: const InputDecoration(
                 labelText: AppStrings.shopPhone,
+                helperText: AppStrings.phoneShownOnSlip,
+                helperMaxLines: 2,
+                prefixIcon: Icon(Icons.phone_outlined),
               ),
               validator: Validators.phoneOptional,
-            ),
-            const Padding(
-              padding: EdgeInsets.only(top: 8),
-              child: Text(
-                AppStrings.phoneShownOnSlip,
-                style: TextStyle(fontSize: 12),
-              ),
             ),
           ],
         ),
