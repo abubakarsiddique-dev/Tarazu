@@ -20,7 +20,9 @@ import '../../auth/domain/app_user.dart';
 import '../../finance/domain/finance_strings.dart';
 import '../../inventory/application/inventory_providers.dart';
 import '../../inventory/domain/models.dart';
+import '../../inventory/domain/sale_models.dart';
 import '../../inventory/domain/sale_strings.dart';
+import '../../inventory/presentation/adjust_stock_dialog.dart';
 import '../../inventory/presentation/report_screen.dart' show ReportStrings;
 import '../../inventory/presentation/slip_sheet.dart';
 import '../../staff/domain/staff_strings.dart';
@@ -57,6 +59,58 @@ class HomeScreen extends ConsumerWidget {
       ),
     );
     if (ok == true) ref.read(inventoryActionsProvider).voidPurchase(p);
+  }
+
+  Future<void> _recordGarbage(
+    BuildContext context,
+    WidgetRef ref,
+    AsyncValue<List<StockItem>> stockAsync,
+  ) async {
+    if (stockAsync.isLoading) return;
+    if (stockAsync.hasError) {
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(const SnackBar(content: Text(AppStrings.errGeneric)));
+      return;
+    }
+    final positiveItems = (stockAsync.value ?? const <StockItem>[])
+        .where((i) => i.weightGrams > 0)
+        .toList();
+    if (positiveItems.isEmpty) {
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(content: Text(SaleStrings.noStockToSell)),
+        );
+      return;
+    }
+    final result = await showAdjustStockDialog(
+      context,
+      items: positiveItems,
+      initialAdd: false,
+      initialReason: AdjustmentReason.garbage,
+      lockReason: true,
+    );
+    if (result == null) return;
+    ref.read(inventoryActionsProvider).adjustStock(
+          materialId: result.item.materialId,
+          materialName: result.item.materialName,
+          deltaGrams: result.deltaGrams,
+          reason: result.reason,
+          note: result.note,
+          costPerKg: result.costPerKg,
+        );
+    if (!context.mounted) return;
+    final remaining = result.item.weightGrams + result.deltaGrams;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(
+            '${result.item.materialName}: ${SaleStrings.remainingStock} ${formatKg(remaining)}',
+          ),
+        ),
+      );
   }
 
   /// Lets the owner set the phone number that is printed on shared slips.
@@ -300,10 +354,17 @@ class HomeScreen extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: AppSpacing.sm),
-            _NavTile(
-              icon: Icons.manage_accounts_outlined,
-              label: StaffStrings.title,
-              onTap: () => context.push(Routes.staff),
+            _NavRow(
+              left: _NavTile(
+                icon: Icons.manage_accounts_outlined,
+                label: StaffStrings.title,
+                onTap: () => context.push(Routes.staff),
+              ),
+              right: _NavTile(
+                icon: Icons.delete_sweep_outlined,
+                label: SaleStrings.recordGarbage,
+                onTap: () => _recordGarbage(context, ref, stockAsync),
+              ),
             ),
           ],
 
