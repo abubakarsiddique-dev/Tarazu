@@ -251,7 +251,7 @@ service cloud.firestore {
         allow create: if isShopOwner(shopId)
           && request.resource.data.keys().hasOnly(
                ['materialId','materialName','deltaGrams','reason','note','dayKey',
-                'createdAt','createdBy'])
+                'createdAt','createdBy','costPerKg'])
           && request.resource.data.materialId is string
           && request.resource.data.materialName is string
           && request.resource.data.materialName.size() > 0
@@ -260,11 +260,20 @@ service cloud.firestore {
           && request.resource.data.deltaGrams != 0
           && request.resource.data.deltaGrams >= -100000000
           && request.resource.data.deltaGrams <= 100000000
-          && request.resource.data.reason in ['correction','loss','other','garbage']
+          && request.resource.data.reason in ['correction','loss','other','garbage','openingStock']
           && request.resource.data.note is string
           && request.resource.data.note.size() <= 200
           && request.resource.data.createdAt is timestamp
-          && request.resource.data.createdBy == request.auth.uid;
+          && request.resource.data.createdBy == request.auth.uid
+          // openingStock: add-only, must supply a non-negative costPerKg
+          && (request.resource.data.reason != 'openingStock'
+              || (request.resource.data.deltaGrams > 0
+                  && 'costPerKg' in request.resource.data
+                  && request.resource.data.costPerKg is number
+                  && request.resource.data.costPerKg >= 0))
+          // costPerKg is only allowed for openingStock
+          && (request.resource.data.reason == 'openingStock'
+              || !('costPerKg' in request.resource.data));
 
         allow update, delete: if false;
       }

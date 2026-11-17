@@ -158,7 +158,7 @@ class _AdjustDialogState extends State<_AdjustDialog> {
     final current = widget.item.weightGrams;
     final reasons = _add
         ? AdjustmentReason.values.where((r) => r != AdjustmentReason.garbage).toList()
-        : AdjustmentReason.values;
+        : AdjustmentReason.values.where((r) => r != AdjustmentReason.openingStock).toList();
     return AlertDialog(
       title: Text('${SaleStrings.adjustStock}: ${widget.item.materialName}'),
       content: SingleChildScrollView(
@@ -179,6 +179,9 @@ class _AdjustDialogState extends State<_AdjustDialog> {
                 onSelectionChanged: (s) => setState(() {
                   _add = s.first;
                   if (_add && _reason == AdjustmentReason.garbage) {
+                    _reason = AdjustmentReason.correction;
+                  }
+                  if (!_add && _reason == AdjustmentReason.openingStock) {
                     _reason = AdjustmentReason.correction;
                   }
                 }),
@@ -209,6 +212,19 @@ class _AdjustDialogState extends State<_AdjustDialog> {
                     ),
                 ],
               ),
+              if (_reason == AdjustmentReason.openingStock) ...[
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _cost,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  decoration: const InputDecoration(labelText: SaleStrings.costPerKgLabel),
+                  validator: (v) {
+                    final val = parseNumber(v);
+                    if (val == null || val < 0) return AppStrings.invalidNumber;
+                    return null;
+                  },
+                ),
+              ],
               const SizedBox(height: 12),
               TextField(
                 controller: _note,

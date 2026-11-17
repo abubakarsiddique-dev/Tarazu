@@ -10,6 +10,7 @@ LedgerEvent _e(
   int grams, [
   int amount = 0,
   AdjustmentReason? reason,
+  double costPerKg = 0,
 ]) =>
     LedgerEvent(
       kind: kind,
@@ -20,6 +21,7 @@ LedgerEvent _e(
       grams: grams,
       amount: amount,
       reason: reason,
+      costPerKg: costPerKg,
     );
 
 void main() {
@@ -174,5 +176,115 @@ void main() {
     expect(r.garbageGrams, 0);
     expect(r.garbageCost, 0);
     expect(r.stockCostNow, 120); // 3 kg left @ Rs 40/kg
+  });
+
+  // ---- opening stock tests ----
+
+  test('opening stock followed by sale gives correct profit (no free profit)', () {
+    // No purchase. Opening stock: 10 kg @ Rs 40/kg.
+    // Sell 5 kg for Rs 250. Cost = 5 * 40 = Rs 200. Profit = 50.
+    final r = computeProfit([
+      LedgerEvent(
+        kind: LedgerKind.adjustment,
+        at: DateTime(2026, 11, 1),
+        dayKey: '2026-11-01',
+        materialId: 'iron',
+        materialName: 'Iron',
+        grams: 10000,
+        reason: AdjustmentReason.openingStock,
+        costPerKg: 40,
+      ),
+      _e(LedgerKind.sale, 2, '2026-11-01', 'iron', 5000, 250),
+    ], from: '2026-11-01', to: '2026-11-01');
+
+    final iron = r.materials.single;
+    expect(iron.soldGrams, 5000);
+    expect(iron.salesAmount, 250);
+    expect(iron.cost, 200); // 5 kg × Rs 40
+    expect(iron.profit, 50);
+    expect(iron.noCostGrams, 0); // no "no cost" warning
+    expect(r.grossProfit, 50);
+  });
+
+  test('opening stock does not create free profit when sold at cost', () {
+    // Opening stock 10 kg @ Rs 50/kg. Sell all 10 kg for Rs 500.
+    // Profit should be 0, not 500 (which would happen if cost = 0).
+    final r = computeProfit([
+      LedgerEvent(
+        kind: LedgerKind.adjustment,
+        at: DateTime(2026, 11, 1),
+        dayKey: '2026-11-01',
+        materialId: 'copper',
+        materialName: 'Copper',
+        grams: 10000,
+        reason: AdjustmentReason.openingStock,
+        costPerKg: 50,
+      ),
+      _e(LedgerKind.sale, 2, '2026-11-01', 'copper', 10000, 500),
+    ], from: '2026-11-01', to: '2026-11-01');
+
+    final copper = r.materials.single;
+    expect(copper.cost, 500);
+    expect(copper.profit, 0);
+    expect(copper.noCostGrams, 0);
+  });
+
+  test('purchase totals unchanged by opening stock — opening stock does not add to salesAmount or acc.cost as a purchase', () {
+    // Opening stock 5 kg @ 30/kg, then purchase 10 kg for Rs 400,
+    // then sell 15 kg for Rs 750.
+    // salesAmount (revenue) = 750; cost = 5*30 + 10*40 = 150 + 400 = 550 (blended avg).
+    // Note: avg after opening stock = 30/kg, after purchase 10kg @ 40 = (150+400)/15000 = 36.67/kg
+    // Sell 15 kg: cost = 15 * 36.67 = 550. Profit = 750 - 550 = 200.
+    final r = computeProfit([
+      LedgerEvent(
+        kind: LedgerKind.adjustment,
+        at: DateTime(2026, 11, 1, 0, 1),
+        dayKey: '2026-11-01',
+        materialId: 'iron',
+        materialName: 'Iron',
+        grams: 5000,
+        reason: AdjustmentReason.openingStock,
+        costPerKg: 30,
+      ),
+      LedgerEvent(
+        kind: LedgerKind.purchase,
+        at: DateTime(2026, 11, 1, 0, 2),
+        dayKey: '2026-11-01',
+        materialId: 'iron',
+        materialName: 'Iron',
+        grams: 10000,
+        amount: 400,
+      ),
+      _e(LedgerKind.sale, 3, '2026-11-01', 'iron', 15000, 750),
+    ], from: '2026-11-01', to: '2026-11-01');
+
+    final iron = r.materials.single;
+    expect(iron.salesAmount, 750); // revenue only from actual sales
+    expect(iron.cost, 550); // blended avg cost
+    expect(iron.profit, 200);
+    expect(iron.noCostGrams, 0);
+  });
+
+  test('opening stock sets lastRate so a later no-purchase sale is costed correctly', () {
+    // Opening stock 8 kg @ Rs 25/kg. Sell 8 kg for Rs 240.
+    // avg = 25; cost = 8 * 25 = 200. profit = 40. noCostGrams = 0.
+    final r = computeProfit([
+      LedgerEvent(
+        kind: LedgerKind.adjustment,
+        at: DateTime(2026, 11, 1),
+        dayKey: '2026-11-01',
+        materialId: 'brass',
+        materialName: 'Brass',
+        grams: 8000,
+        reason: AdjustmentReason.openingStock,
+        costPerKg: 25,
+      ),
+      _e(LedgerKind.sale, 2, '2026-11-01', 'brass', 8000, 240),
+    ], from: '2026-11-01', to: '2026-11-01');
+
+    final brass = r.materials.single;
+    expect(brass.cost, 200);
+    expect(brass.profit, 40);
+    expect(brass.noCostGrams, 0);
   });
 }

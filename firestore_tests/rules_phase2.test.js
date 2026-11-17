@@ -147,6 +147,42 @@ test('adjustStock with reason garbage is accepted for the owner', async () => {
   await assertSucceeds(b.commit());
 });
 
+test('openingStock adjustment with costPerKg is accepted for the owner', async () => {
+  const db = alice();
+  const b = writeBatch(db);
+  b.set(doc(db, 'shops/s1/adjustments/a_os'), adjustment({ reason: 'openingStock', deltaGrams: 5000, costPerKg: 40 }));
+  b.set(doc(db, 'shops/s1/stock/iron'), { materialName: 'Iron', weightGrams: increment(5000) }, { merge: true });
+  await assertSucceeds(b.commit());
+});
+
+test('openingStock adjustment with zero costPerKg is accepted', async () => {
+  const db = alice();
+  const b = writeBatch(db);
+  b.set(doc(db, 'shops/s1/adjustments/a_os2'), adjustment({ reason: 'openingStock', deltaGrams: 3000, costPerKg: 0 }));
+  b.set(doc(db, 'shops/s1/stock/iron'), { materialName: 'Iron', weightGrams: increment(3000) }, { merge: true });
+  await assertSucceeds(b.commit());
+});
+
+test('openingStock adjustment without costPerKg is rejected', async () => {
+  await assertFails(setDoc(doc(alice(), 'shops/s1/adjustments/x'),
+    adjustment({ reason: 'openingStock', deltaGrams: 5000 })));
+});
+
+test('openingStock adjustment with negative deltaGrams is rejected', async () => {
+  await assertFails(setDoc(doc(alice(), 'shops/s1/adjustments/x'),
+    adjustment({ reason: 'openingStock', deltaGrams: -5000, costPerKg: 40 })));
+});
+
+test('openingStock adjustment with negative costPerKg is rejected', async () => {
+  await assertFails(setDoc(doc(alice(), 'shops/s1/adjustments/x'),
+    adjustment({ reason: 'openingStock', deltaGrams: 5000, costPerKg: -1 })));
+});
+
+test('non-openingStock adjustment with costPerKg field is rejected', async () => {
+  await assertFails(setDoc(doc(alice(), 'shops/s1/adjustments/x'),
+    adjustment({ reason: 'correction', deltaGrams: -1000, costPerKg: 40 })));
+});
+
 test('bad adjustments are rejected', async () => {
   const add = (o) => setDoc(doc(alice(), 'shops/s1/adjustments/x'), adjustment(o));
   await assertFails(add({ deltaGrams: 0 }));
