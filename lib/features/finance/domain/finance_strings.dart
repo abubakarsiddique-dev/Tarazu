@@ -21,6 +21,7 @@ class FinanceStrings {
   static const byMaterial = 'Profit by material';
   static const sold = 'Sold';
   static const cost = 'Cost';
+  static const garbage = 'Garbage';
   static const margin = 'margin';
   static const perKg = 'per kg';
   static const stockCostNow = 'Money tied up in stock now (at cost)';

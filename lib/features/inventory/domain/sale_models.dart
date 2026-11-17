@@ -89,7 +89,7 @@ class Sale {
 }
 
 /// Why stock was changed by hand. Stored by name in Firestore.
-enum AdjustmentReason { correction, loss, other }
+enum AdjustmentReason { correction, loss, other, garbage, openingStock }
 
 /// Grams of [materialId] still free to sell: what is in stock minus what is
 /// already on the sale slip being typed. Pure, so it can be unit tested.

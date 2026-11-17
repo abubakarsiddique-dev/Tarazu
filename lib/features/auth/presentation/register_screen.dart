@@ -4,8 +4,11 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_strings.dart';
 import '../../../core/router/app_router.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/auth_error_mapper.dart';
 import '../../../core/utils/validators.dart';
+import '../../../core/widgets/app_card.dart';
+import '../../../core/widgets/primary_button.dart';
 import '../application/auth_providers.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
@@ -58,86 +61,167 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       }
     });
     final loading = ref.watch(authControllerProvider).isLoading;
+    final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text(AppStrings.register)),
+      appBar: AppBar(
+        leading: IconButton(
+          tooltip: AppStrings.login,
+          icon: const Icon(Icons.arrow_back),
+          onPressed: loading ? null : () => context.go(Routes.login),
+        ),
+        title: const Text(AppStrings.register),
+      ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(AppSpacing.lg),
           child: Form(
             key: _formKey,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                TextFormField(
-                  controller: _ownerName,
-                  textCapitalization: TextCapitalization.words,
-                  textInputAction: TextInputAction.next,
-                  decoration: const InputDecoration(labelText: AppStrings.ownerName),
-                  validator: Validators.requiredField,
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _shopName,
-                  textCapitalization: TextCapitalization.words,
-                  textInputAction: TextInputAction.next,
-                  decoration: const InputDecoration(labelText: AppStrings.shopName),
-                  validator: Validators.requiredField,
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _phone,
-                  keyboardType: TextInputType.phone,
-                  textInputAction: TextInputAction.next,
-                  decoration: const InputDecoration(labelText: AppStrings.shopPhoneOptional),
-                  validator: Validators.phoneOptional,
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _email,
-                  keyboardType: TextInputType.emailAddress,
-                  textInputAction: TextInputAction.next,
-                  decoration: const InputDecoration(labelText: AppStrings.email),
-                  validator: Validators.email,
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _password,
-                  obscureText: _obscure,
-                  textInputAction: TextInputAction.next,
-                  decoration: InputDecoration(
-                    labelText: AppStrings.password,
-                    suffixIcon: IconButton(
-                      icon: Icon(_obscure ? Icons.visibility : Icons.visibility_off),
-                      onPressed: () => setState(() => _obscure = !_obscure),
-                    ),
+                AppCard(
+                  padding: const EdgeInsets.all(AppSpacing.lg),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.storefront_outlined,
+                            size: 20,
+                            color: AppColors.primary,
+                          ),
+                          const SizedBox(width: AppSpacing.sm),
+                          Expanded(
+                            child: Text(
+                              AppStrings.shopDetails,
+                              style: theme.textTheme.titleMedium,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: AppSpacing.lg),
+                      TextFormField(
+                        controller: _ownerName,
+                        textCapitalization: TextCapitalization.words,
+                        textInputAction: TextInputAction.next,
+                        decoration: const InputDecoration(
+                          labelText: AppStrings.ownerName,
+                          prefixIcon: Icon(Icons.person_outline),
+                        ),
+                        validator: Validators.requiredField,
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      TextFormField(
+                        controller: _shopName,
+                        textCapitalization: TextCapitalization.words,
+                        textInputAction: TextInputAction.next,
+                        decoration: const InputDecoration(
+                          labelText: AppStrings.shopName,
+                          prefixIcon: Icon(Icons.store_outlined),
+                        ),
+                        validator: Validators.requiredField,
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      TextFormField(
+                        controller: _phone,
+                        keyboardType: TextInputType.phone,
+                        textInputAction: TextInputAction.next,
+                        decoration: const InputDecoration(
+                          labelText: AppStrings.shopPhoneOptional,
+                          helperText: AppStrings.phoneShownOnSlip,
+                          helperMaxLines: 2,
+                          prefixIcon: Icon(Icons.phone_outlined),
+                        ),
+                        validator: Validators.phoneOptional,
+                      ),
+                    ],
                   ),
-                  validator: Validators.password,
                 ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _confirm,
-                  obscureText: _obscure,
-                  textInputAction: TextInputAction.done,
-                  onFieldSubmitted: (_) => loading ? null : _submit(),
-                  decoration: const InputDecoration(labelText: AppStrings.confirmPassword),
-                  validator: (v) => Validators.confirmPassword(v, _password.text),
+                const SizedBox(height: AppSpacing.md),
+                AppCard(
+                  padding: const EdgeInsets.all(AppSpacing.lg),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.lock_person_outlined,
+                            size: 20,
+                            color: AppColors.primary,
+                          ),
+                          const SizedBox(width: AppSpacing.sm),
+                          Expanded(
+                            child: Text(
+                              AppStrings.login,
+                              style: theme.textTheme.titleMedium,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: AppSpacing.lg),
+                      TextFormField(
+                        controller: _email,
+                        keyboardType: TextInputType.emailAddress,
+                        textInputAction: TextInputAction.next,
+                        decoration: const InputDecoration(
+                          labelText: AppStrings.email,
+                          prefixIcon: Icon(Icons.email_outlined),
+                        ),
+                        validator: Validators.email,
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      TextFormField(
+                        controller: _password,
+                        obscureText: _obscure,
+                        textInputAction: TextInputAction.next,
+                        decoration: InputDecoration(
+                          labelText: AppStrings.password,
+                          prefixIcon: const Icon(Icons.lock_outline),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _obscure
+                                  ? Icons.visibility_outlined
+                                  : Icons.visibility_off_outlined,
+                            ),
+                            onPressed: () =>
+                                setState(() => _obscure = !_obscure),
+                          ),
+                        ),
+                        validator: Validators.password,
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      TextFormField(
+                        controller: _confirm,
+                        obscureText: _obscure,
+                        textInputAction: TextInputAction.done,
+                        onFieldSubmitted: (_) => loading ? null : _submit(),
+                        decoration: const InputDecoration(
+                          labelText: AppStrings.confirmPassword,
+                          prefixIcon: Icon(Icons.lock_reset_outlined),
+                        ),
+                        validator: (v) =>
+                            Validators.confirmPassword(v, _password.text),
+                      ),
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 24),
-                FilledButton(
-                  onPressed: loading ? null : _submit,
-                  child: loading
-                      ? const SizedBox(
-                          width: 22,
-                          height: 22,
-                          child: CircularProgressIndicator(strokeWidth: 2.5),
-                        )
-                      : const Text(AppStrings.register),
+                const SizedBox(height: AppSpacing.xl),
+                PrimaryButton(
+                  label: AppStrings.register,
+                  icon: Icons.check_circle_outline_rounded,
+                  isLoading: loading,
+                  onPressed: _submit,
                 ),
-                const SizedBox(height: 8),
-                TextButton(
-                  onPressed: loading ? null : () => context.go(Routes.login),
-                  child: const Text(AppStrings.haveAccount),
+                const SizedBox(height: AppSpacing.md),
+                SecondaryButton(
+                  label: AppStrings.haveAccount,
+                  icon: Icons.login_rounded,
+                  onPressed: loading
+                      ? null
+                      : () => context.go(Routes.login),
                 ),
               ],
             ),

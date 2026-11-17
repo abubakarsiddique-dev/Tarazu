@@ -15,4 +15,9 @@ class StaffStrings {
       'expenses or reports, change rates, adjust stock or cancel slips.';
   static const needsInternet = 'Internet is required to create a munshi account.';
   static const switchNote = 'Switch off to block this munshi immediately.';
+  static const munshiHisaab = 'Munshi hisaab';
+  static const meriPurchases = 'Meri purchases';
+  static const meriSales = 'Meri sales';
+  static const munshiPrefix = 'Munshi';
+  static const munshiLegend = 'Orange = munshi ki entry (buy ya sell)';
 }
