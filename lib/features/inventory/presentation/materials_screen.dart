@@ -2,10 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/app_strings.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/format.dart';
+import '../../../core/widgets/app_card.dart';
+import '../../../core/widgets/error_state.dart';
+import '../../../core/widgets/loading_state.dart';
+import '../../auth/application/auth_providers.dart';
 import '../application/inventory_providers.dart';
 import '../domain/models.dart';
-import '../../auth/application/auth_providers.dart';
 
 class MaterialsScreen extends ConsumerWidget {
   const MaterialsScreen({super.key});
@@ -15,13 +19,12 @@ class MaterialsScreen extends ConsumerWidget {
     WidgetRef ref, {
     ScrapMaterial? existing,
   }) async {
-    final result =
-        await showDialog<
-          ({String name, double rateKg, double ratePakaSeer, PriceUnit unit})
-        >(
-          context: context,
-          builder: (_) => _MaterialDialog(existing: existing),
-        );
+    final result = await showDialog<
+      ({String name, double rateKg, double ratePakaSeer, PriceUnit unit})
+    >(
+      context: context,
+      builder: (_) => _MaterialDialog(existing: existing),
+    );
     if (result == null) return;
     final actions = ref.read(inventoryActionsProvider);
     if (existing == null) {
@@ -52,13 +55,13 @@ class MaterialsScreen extends ConsumerWidget {
       floatingActionButton: isOwner
           ? FloatingActionButton.extended(
               onPressed: () => _edit(context, ref),
-              icon: const Icon(Icons.add),
+              icon: const Icon(Icons.add_rounded),
               label: const Text(AppStrings.addMaterial),
             )
           : null,
       body: materials.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (_, _) => const Center(child: Text(AppStrings.errGeneric)),
+        loading: () => const LoadingState(),
+        error: (_, _) => const ErrorState(),
         data: (list) {
           if (list.isEmpty) {
             return Center(
@@ -72,21 +75,26 @@ class MaterialsScreen extends ConsumerWidget {
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 16),
-                    if (isOwner) OutlinedButton(
-                      onPressed: ref
-                          .read(inventoryActionsProvider)
-                          .seedCommonMaterials,
-                      child: const Text(AppStrings.addCommonMaterials),
-                    ),
+                    if (isOwner)
+                      OutlinedButton(
+                        onPressed: ref
+                            .read(inventoryActionsProvider)
+                            .seedCommonMaterials,
+                        child: const Text(AppStrings.addCommonMaterials),
+                      ),
                   ],
                 ),
               ),
             );
           }
-          return ListView.separated(
-            padding: const EdgeInsets.only(bottom: 96),
+          return ListView.builder(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.lg,
+              AppSpacing.lg,
+              AppSpacing.lg,
+              AppSpacing.fabClearance,
+            ),
             itemCount: list.length,
-            separatorBuilder: (_, _) => const Divider(height: 1),
             itemBuilder: (context, i) {
               final m = list[i];
               final parts = <String>[
@@ -94,20 +102,31 @@ class MaterialsScreen extends ConsumerWidget {
                 if (m.ratePakaSeer > 0)
                   '${formatRate(m.ratePakaSeer)} / paka seer',
               ];
-              return ListTile(
-                title: Text(m.name),
-                subtitle: Text(
-                  parts.isEmpty ? AppStrings.rateNotSet : parts.join('  •  '),
-                ),
-                trailing: isOwner
-                    ? Switch(
-                        value: m.isActive,
-                        onChanged: (v) => ref
-                            .read(inventoryActionsProvider)
-                            .updateMaterial(m.id, isActive: v),
-                      )
-                    : null,
+              return AppCard(
+                padding: EdgeInsets.zero,
                 onTap: isOwner ? () => _edit(context, ref, existing: m) : null,
+                child: ListTile(
+                  title: Text(
+                    m.name,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      color: m.isActive
+                          ? AppColors.textPrimary
+                          : AppColors.textSecondary,
+                    ),
+                  ),
+                  subtitle: Text(
+                    parts.isEmpty ? AppStrings.rateNotSet : parts.join('  •  '),
+                  ),
+                  trailing: isOwner
+                      ? Switch(
+                          value: m.isActive,
+                          onChanged: (v) => ref
+                              .read(inventoryActionsProvider)
+                              .updateMaterial(m.id, isActive: v),
+                        )
+                      : null,
+                ),
               );
             },
           );
@@ -172,6 +191,7 @@ class _MaterialDialogState extends State<_MaterialDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return AlertDialog(
       title: Text(
         widget.existing == null
@@ -197,9 +217,9 @@ class _MaterialDialogState extends State<_MaterialDialog> {
                     ? AppStrings.fieldRequired
                     : null,
               ),
-              const SizedBox(height: 16),
-              const Text(AppStrings.fixedRates),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.lg),
+              Text(AppStrings.fixedRates, style: theme.textTheme.titleSmall),
+              const SizedBox(height: AppSpacing.sm),
               TextFormField(
                 controller: _rateKg,
                 keyboardType: const TextInputType.numberWithOptions(
@@ -210,7 +230,7 @@ class _MaterialDialogState extends State<_MaterialDialog> {
                 ),
                 validator: _rateValidator,
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.md),
               TextFormField(
                 controller: _rateSeer,
                 keyboardType: const TextInputType.numberWithOptions(
@@ -222,15 +242,18 @@ class _MaterialDialogState extends State<_MaterialDialog> {
                 validator: _rateValidator,
               ),
               const Padding(
-                padding: EdgeInsets.only(top: 8),
+                padding: EdgeInsets.only(top: AppSpacing.sm),
                 child: Text(
                   AppStrings.kachaToPaka,
-                  style: TextStyle(fontSize: 12),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: AppColors.textSecondary,
+                  ),
                 ),
               ),
-              const SizedBox(height: 16),
-              const Text(AppStrings.defaultUnit),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.lg),
+              Text(AppStrings.defaultUnit, style: theme.textTheme.titleSmall),
+              const SizedBox(height: AppSpacing.sm),
               SegmentedButton<PriceUnit>(
                 segments: const [
                   ButtonSegment(

@@ -118,6 +118,26 @@ void main() {
       expect(rec['createdBy'], 'u1');
     });
 
+    test('removing weight with garbage reason lowers stock and preserves purchases and daily totals', () async {
+      repo.adjustStock(
+        shopId: 's1', uid: 'u1', materialId: 'iron', materialName: 'Iron',
+        deltaGrams: -3000, reason: AdjustmentReason.garbage, note: '  dirt and stones ',
+      );
+      await settle();
+
+      expect(await stockOf('iron'), 17000);
+      final rec = (await db.collection('shops/s1/adjustments').get()).docs.single.data();
+      expect(rec['deltaGrams'], -3000);
+      expect(rec['reason'], 'garbage');
+      expect(rec['note'], 'dirt and stones'); // trimmed
+      expect(rec['createdBy'], 'u1');
+
+      final bought = (await db.doc('shops/s1/daily/$today').get()).data()!;
+      expect(bought['totalAmount'], 800);
+      expect(bought['totalWeightGrams'], 20000);
+      expect(bought['entryCount'], 1);
+    });
+
     test('adding weight raises stock, even for a material with no stock yet', () async {
       repo.adjustStock(
         shopId: 's1', uid: 'u1', materialId: 'copper', materialName: 'Copper',
@@ -135,6 +155,29 @@ void main() {
       await settle();
       expect((await db.collection('shops/s1/adjustments').get()).docs, isEmpty);
       expect(await stockOf('iron'), 20000);
+    });
+
+    test('adding weight with openingStock reason raises stock, stores costPerKg and does not touch purchase totals', () async {
+      repo.adjustStock(
+        shopId: 's1', uid: 'u1', materialId: 'copper', materialName: 'Copper',
+        deltaGrams: 5000, reason: AdjustmentReason.openingStock, costPerKg: 50.0,
+      );
+      await settle();
+
+      expect(await stockOf('copper'), 5000);
+      final rec = (await db.collection('shops/s1/adjustments').get()).docs
+          .firstWhere((d) => d.data()['materialId'] == 'copper')
+          .data();
+      expect(rec['deltaGrams'], 5000);
+      expect(rec['reason'], 'openingStock');
+      expect(rec['costPerKg'], 50.0);
+      expect(rec['createdBy'], 'u1');
+
+      // Purchase totals must be untouched.
+      final bought = (await db.doc('shops/s1/daily/$today').get()).data()!;
+      expect(bought['totalAmount'], 800);
+      expect(bought['totalWeightGrams'], 20000);
+      expect(bought['entryCount'], 1);
     });
   });
 }

@@ -5,6 +5,7 @@ import '../../../core/sync/write_failures.dart';
 import '../../auth/application/auth_providers.dart';
 import '../../inventory/application/inventory_providers.dart' show shopIdProvider;
 import '../../inventory/domain/models.dart' show dayKey;
+import '../../inventory/domain/sale_models.dart' show AdjustmentReason;
 import '../domain/expense.dart';
 import '../domain/profit.dart';
 
@@ -51,6 +52,9 @@ List<LedgerEvent> _adjustmentEvents(_Docs docs) {
     final id = m['materialId'] as String? ?? '';
     final delta = (m['deltaGrams'] as num?)?.toInt() ?? 0;
     if (id.isEmpty || delta == 0) continue;
+    final reasonStr = m['reason'] as String?;
+    final reason = AdjustmentReason.values.where((r) => r.name == reasonStr).firstOrNull;
+    final costPerKg = (m['costPerKg'] as num?)?.toDouble() ?? 0.0;
     out.add(LedgerEvent(
       kind: LedgerKind.adjustment,
       at: _at(m),
@@ -58,6 +62,8 @@ List<LedgerEvent> _adjustmentEvents(_Docs docs) {
       materialId: id,
       materialName: m['materialName'] as String? ?? '',
       grams: delta,
+      reason: reason,
+      costPerKg: costPerKg,
     ));
   }
   return out;

@@ -174,6 +174,7 @@ class InventoryActions {
     required int deltaGrams,
     required AdjustmentReason reason,
     String note = '',
+    double? costPerKg,
   }) => _repo.adjustStock(
     shopId: _shopId,
     uid: _uid,
@@ -182,6 +183,7 @@ class InventoryActions {
     deltaGrams: deltaGrams,
     reason: reason,
     note: note,
+    costPerKg: costPerKg,
   );
 }
 
