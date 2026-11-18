@@ -157,13 +157,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ),
                   ),
                   const SizedBox(height: AppSpacing.md),
-                  SecondaryButton(
-                    label: AppStrings.noAccount,
-                    icon: Icons.person_add_alt_1_outlined,
-                    onPressed: loading
-                        ? null
-                        : () => context.go(Routes.register),
-                  ),
+                  //SecondaryButton(
+                  //   label: AppStrings.noAccount,
+                  //   icon: Icons.person_add_alt_1_outlined,
+                  //   onPressed: loading
+                  //       ? null
+                  //       : () => context.go(Routes.register),
+                  // ),
                 ],
               ),
             ),
