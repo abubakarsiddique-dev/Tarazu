@@ -33,7 +33,7 @@ class AppStrings {
   static const forgotPassword = 'Forgot password?';
   static const sendResetLink = 'Send reset link';
   static const resetLinkSent = 'Reset link sent. Check your email.';
-  static const noAccount = "Don't have an account? Register";
+  // static const noAccount = "Don't have an account? Register";
   static const haveAccount = 'Already have an account? Login';
 
   // Validation

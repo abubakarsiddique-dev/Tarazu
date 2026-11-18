@@ -2,7 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../../../core/constants/app_strings.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/format.dart';
+import '../../../core/widgets/app_card.dart';
+import '../../../core/widgets/empty_state.dart';
+import '../../../core/widgets/error_state.dart';
+import '../../../core/widgets/loading_state.dart';
+import '../../../core/widgets/primary_button.dart';
+import '../../../core/widgets/stat_tile.dart';
 import '../../auth/application/auth_providers.dart';
 import '../application/inventory_providers.dart';
 import '../application/report_providers.dart';
@@ -22,7 +30,8 @@ class ReportStrings {
   static const purchases = 'Purchases';
   static const sales = 'Sales';
   static const difference = 'Sales minus purchases';
-  static const notProfit = 'Not profit: stock you have not sold yet is not counted.';
+  static const notProfit =
+      'Not profit: stock you have not sold yet is not counted.';
   static const byMaterial = 'By material';
   static const bought = 'Bought';
   static const sold = 'Sold';
@@ -52,9 +61,9 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
   bool get _isCurrent => !_start.isBefore(periodStart(_period, DateTime.now()));
 
   void _setPeriod(HistoryPeriod p) => setState(() {
-        _period = p;
-        _start = periodStart(p, _start);
-      });
+    _period = p;
+    _start = periodStart(p, _start);
+  });
 
   void _move(int n) => setState(() => _start = shiftPeriod(_period, _start, n));
 
@@ -68,15 +77,9 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
 
     Widget body;
     if (purchasesAsync.hasError || salesAsync.hasError) {
-      body = const Padding(
-        padding: EdgeInsets.all(32),
-        child: Center(child: Text(ReportStrings.error)),
-      );
+      body = const ErrorState(message: ReportStrings.error, compact: true);
     } else if (!purchasesAsync.hasValue || !salesAsync.hasValue) {
-      body = const Padding(
-        padding: EdgeInsets.all(32),
-        child: Center(child: CircularProgressIndicator()),
-      );
+      body = const LoadingState(compact: true);
     } else {
       final p = summarizeHistory(purchasesAsync.requireValue);
       final s = summarizeSales(salesAsync.requireValue);
@@ -87,59 +90,130 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
       body = Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _TotalCard(
-            title: ReportStrings.purchases,
-            amount: formatRs(p.totalAmount),
-            detail: '${formatKg(p.totalGrams)} • ${p.slipCount}',
-            color: theme.colorScheme.primaryContainer,
+          StatTile(
+            label: ReportStrings.purchases,
+            icon: Icons.shopping_cart_checkout_rounded,
+            value: formatRs(p.totalAmount),
+            subtitle:
+                '${formatKg(p.totalGrams)} • ${p.slipCount} ${AppStrings.entries}',
+            variant: StatTileVariant.primary,
+            isHero: false,
           ),
-          const SizedBox(height: 8),
-          _TotalCard(
-            title: ReportStrings.sales,
-            amount: formatRs(s.totalAmount),
-            detail: '${formatKg(s.totalGrams)} • ${s.saleCount}',
-            color: theme.colorScheme.secondaryContainer,
+          const SizedBox(height: AppSpacing.sm),
+          StatTile(
+            label: ReportStrings.sales,
+            icon: Icons.local_shipping_outlined,
+            value: formatRs(s.totalAmount),
+            subtitle:
+                '${formatKg(s.totalGrams)} • ${s.saleCount} ${AppStrings.entries}',
+            variant: StatTileVariant.secondary,
+            isHero: false,
           ),
-          const SizedBox(height: 8),
-          Card(
-            child: ListTile(
-              title: const Text(ReportStrings.difference),
-              subtitle: const Text(ReportStrings.notProfit),
-              trailing: Text(
-                '${diff < 0 ? '-' : ''}${formatRs(diff.abs())}',
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: diff < 0 ? theme.colorScheme.error : null,
+          const SizedBox(height: AppSpacing.sm),
+          AppCard(
+            backgroundColor: diff < 0
+                ? AppColors.errorContainer
+                : AppColors.surfaceCard,
+            borderColor: diff < 0
+                ? AppColors.error.withValues(alpha: 0.4)
+                : AppColors.outline,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        ReportStrings.difference,
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          color: diff < 0
+                              ? AppColors.onErrorContainer
+                              : AppColors.textPrimary,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    Text(
+                      '${diff < 0 ? '-' : ''}${formatRs(diff.abs())}',
+                      style: AppTextStyles.statNumber.copyWith(
+                        color: diff < 0
+                            ? AppColors.error
+                            : AppColors.textPrimary,
+                      ),
+                    ),
+                  ],
                 ),
-              ),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  ReportStrings.notProfit,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: diff < 0
+                        ? AppColors.onErrorContainer.withValues(alpha: 0.85)
+                        : AppColors.textSecondary,
+                  ),
+                ),
+              ],
             ),
           ),
           if (empty)
-            const Padding(
-              padding: EdgeInsets.all(32),
-              child: Center(child: Text(ReportStrings.nothing)),
+            const EmptyState(
+              icon: Icons.bar_chart_rounded,
+              message: ReportStrings.nothing,
+              compact: true,
             )
           else ...[
-            const SizedBox(height: 20),
+            const SizedBox(height: AppSpacing.xl),
             Text(ReportStrings.byMaterial, style: theme.textTheme.titleMedium),
-            const SizedBox(height: 8),
-            Card(
-              child: Column(
-                children: [
-                  for (final r in rows)
-                    ListTile(
-                      title: Text(r.name),
-                      subtitle: Text(
-                        '${ReportStrings.bought}: ${formatKg(r.boughtGrams)} • ${formatRs(r.boughtAmount)}\n'
-                        '${ReportStrings.sold}: ${formatKg(r.soldGrams)} • ${formatRs(r.soldAmount)}',
-                      ),
-                      isThreeLine: true,
+            const SizedBox(height: AppSpacing.sm),
+            for (final r in rows)
+              AppCard(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(r.name, style: theme.textTheme.titleMedium),
+                    const SizedBox(height: AppSpacing.xs),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Flexible(
+                          child: Text(
+                            '${ReportStrings.bought}: ${formatKg(r.boughtGrams)}',
+                            style: theme.textTheme.bodyMedium,
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.sm),
+                        Text(
+                          formatRs(r.boughtAmount),
+                          style: AppTextStyles.cardAmount,
+                        ),
+                      ],
                     ),
-                ],
+                    const SizedBox(height: 2),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Flexible(
+                          child: Text(
+                            '${ReportStrings.sold}: ${formatKg(r.soldGrams)}',
+                            style: theme.textTheme.bodyMedium,
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.sm),
+                        Text(
+                          formatRs(r.soldAmount),
+                          style: AppTextStyles.cardAmount.copyWith(
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
-            OutlinedButton.icon(
+            const SizedBox(height: AppSpacing.lg),
+            PrimaryButton(
               onPressed: () => SharePlus.instance.share(
                 ShareParams(
                   text: buildReportText(
@@ -150,9 +224,8 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
                   ),
                 ),
               ),
-              icon: const Icon(Icons.share),
-              label: const Text(ReportStrings.share),
-              style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+              icon: Icons.share_outlined,
+              label: ReportStrings.share,
             ),
           ],
         ],
@@ -162,85 +235,58 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text(ReportStrings.title)),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppSpacing.lg),
         children: [
           SegmentedButton<HistoryPeriod>(
             segments: const [
-              ButtonSegment(value: HistoryPeriod.day, label: Text(ReportStrings.day)),
-              ButtonSegment(value: HistoryPeriod.week, label: Text(ReportStrings.week)),
-              ButtonSegment(value: HistoryPeriod.month, label: Text(ReportStrings.month)),
+              ButtonSegment(
+                value: HistoryPeriod.day,
+                label: Text(ReportStrings.day),
+              ),
+              ButtonSegment(
+                value: HistoryPeriod.week,
+                label: Text(ReportStrings.week),
+              ),
+              ButtonSegment(
+                value: HistoryPeriod.month,
+                label: Text(ReportStrings.month),
+              ),
             ],
             selected: {_period},
             onSelectionChanged: (s) => _setPeriod(s.first),
           ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              IconButton(
-                tooltip: ReportStrings.previous,
-                icon: const Icon(Icons.chevron_left),
-                onPressed: () => _move(-1),
-              ),
-              Expanded(
-                child: Text(
-                  _label(_period, _start),
-                  textAlign: TextAlign.center,
-                  style: theme.textTheme.titleMedium,
+          const SizedBox(height: AppSpacing.sm),
+          AppCard(
+            margin: EdgeInsets.zero,
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.xs,
+              vertical: AppSpacing.xs,
+            ),
+            child: Row(
+              children: [
+                IconButton(
+                  tooltip: ReportStrings.previous,
+                  icon: const Icon(Icons.chevron_left_rounded),
+                  onPressed: () => _move(-1),
                 ),
-              ),
-              IconButton(
-                tooltip: ReportStrings.next,
-                icon: const Icon(Icons.chevron_right),
-                onPressed: _isCurrent ? null : () => _move(1),
-              ),
-            ],
+                Expanded(
+                  child: Text(
+                    _label(_period, _start),
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.titleMedium,
+                  ),
+                ),
+                IconButton(
+                  tooltip: ReportStrings.next,
+                  icon: const Icon(Icons.chevron_right_rounded),
+                  onPressed: _isCurrent ? null : () => _move(1),
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.md),
           body,
         ],
-      ),
-    );
-  }
-}
-
-class _TotalCard extends StatelessWidget {
-  const _TotalCard({
-    required this.title,
-    required this.amount,
-    required this.detail,
-    required this.color,
-  });
-
-  final String title;
-  final String amount;
-  final String detail;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Card(
-      color: color,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title, style: theme.textTheme.titleMedium),
-                  const SizedBox(height: 4),
-                  Text(detail),
-                ],
-              ),
-            ),
-            Text(
-              amount,
-              style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
-            ),
-          ],
-        ),
       ),
     );
   }

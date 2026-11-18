@@ -1,5 +1,4 @@
 import 'package:firebase_auth/firebase_auth.dart';
-
 import '../constants/app_strings.dart';
 
 /// Turns any thrown error into a short, user-friendly message.

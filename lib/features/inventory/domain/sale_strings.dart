@@ -15,15 +15,16 @@ class SaleStrings {
   static const inStock = 'In stock';
   static const sellWeightKg = 'Weight to sell (kg)';
   static const sellRatePerKg = 'Selling rate (Rs per kg)';
-  static const notEnoughStock = 'Not enough stock';
-  static const noStockToSell = 'There is no stock to sell yet.';
-  static const noSalesToday = 'No sales today.';
+  static const notEnoughStock = 'Itna stock mojood nahi hai';
+  static const noStockToSell = 'Bechne ke liye abhi koi stock nahi hai.';
+  static const noSalesToday = 'Aaj abhi koi sale nahi hui.';
   static const cancelSale = 'Cancel sale';
-  static const cancelSaleTitle = 'Cancel this sale?';
-  static const cancelSaleBody = 'The weight goes back into stock and today\'s sales total is reduced.';
+  static const cancelSaleTitle = 'Sale cancel karein?';
+  static const cancelSaleBody =
+      'Yeh wazan wapas stock mein jama ho jayega aur aaj ki sales total kam ho jayegi.';
   static const waitingToSync = 'Waiting to sync';
   static const keep = 'Keep';
-  static const yesCancel = 'Yes, cancel';
+  static const yesCancel = 'Haan, cancel karein';
   static const negativeStockWarning = 'Stock is below zero. Check your entries.';
 
   static const adjustStock = 'Adjust stock';
