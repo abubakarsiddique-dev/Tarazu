@@ -103,15 +103,22 @@ class InventoryRepository {
     String name,
     double rateKg,
     double ratePakaSeer,
-    PriceUnit unit,
-  ) {
+    PriceUnit unit, {
+    double ratePiece = 0,
+  }) {
+    final defaultRate = switch (unit) {
+      PriceUnit.pakaSeer => ratePakaSeer,
+      PriceUnit.piece => ratePiece,
+      PriceUnit.kg => rateKg,
+    };
     _send(
       _shop(shopId).collection('materials').doc().set({
         'name': name.trim(),
         'rateKg': rateKg,
         'ratePakaSeer': ratePakaSeer,
+        'ratePiece': ratePiece,
         // `rate` = rate of the default unit (kept for older app versions).
-        'rate': unit == PriceUnit.pakaSeer ? ratePakaSeer : rateKg,
+        'rate': defaultRate,
         'priceUnit': unit.name,
         'isActive': true,
         'createdAt': Timestamp.now(),
@@ -126,6 +133,7 @@ class InventoryRepository {
     String? name,
     double? rateKg,
     double? ratePakaSeer,
+    double? ratePiece,
     PriceUnit? priceUnit,
     bool? isActive,
   }) {
@@ -133,11 +141,16 @@ class InventoryRepository {
       'name': ?name?.trim(),
       'rateKg': ?rateKg,
       'ratePakaSeer': ?ratePakaSeer,
+      'ratePiece': ?ratePiece,
       'priceUnit': ?priceUnit?.name,
       'isActive': ?isActive,
     };
     if (rateKg != null && ratePakaSeer != null && priceUnit != null) {
-      data['rate'] = priceUnit == PriceUnit.pakaSeer ? ratePakaSeer : rateKg;
+      data['rate'] = switch (priceUnit) {
+        PriceUnit.pakaSeer => ratePakaSeer,
+        PriceUnit.piece => ratePiece ?? 0,
+        PriceUnit.kg => rateKg,
+      };
     }
     if (data.isEmpty) return;
     _send(

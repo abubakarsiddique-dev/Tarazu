@@ -14,6 +14,7 @@ import '../../../core/widgets/stat_tile.dart';
 import '../../auth/application/auth_providers.dart';
 import '../application/inventory_providers.dart';
 import '../domain/models.dart';
+import '../domain/sale_models.dart';
 import '../domain/sale_strings.dart';
 import 'adjust_stock_dialog.dart';
 
@@ -24,8 +25,13 @@ class StockScreen extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref,
     StockItem item,
+    List<ScrapMaterial> materials,
   ) async {
-    final result = await showAdjustStockDialog(context, item: item);
+    final result = await showAdjustStockDialog(
+      context,
+      item: item,
+      materials: materials,
+    );
     if (result == null) return;
     ref.read(inventoryActionsProvider).adjustStock(
       materialId: item.materialId,
@@ -37,13 +43,25 @@ class StockScreen extends ConsumerWidget {
     );
     if (!context.mounted) return;
     final remaining = item.weightGrams + result.deltaGrams;
+    final remLabel = formatStockQty(
+      remaining,
+      materials: materials,
+      materialId: item.materialId,
+    );
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(
         SnackBar(
           content: Text(
-            '${item.materialName}: ${SaleStrings.remainingStock} ${formatKg(remaining)}',
+            '${item.materialName}: ${SaleStrings.remainingStock} $remLabel',
           ),
+          action: result.reason == AdjustmentReason.garbage
+              ? SnackBarAction(
+                  label: SaleStrings.viewGarbageHistory,
+                  textColor: AppColors.primaryContainer,
+                  onPressed: () => context.push(Routes.garbageHistory),
+                )
+              : null,
         ),
       );
   }
@@ -51,12 +69,20 @@ class StockScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final stock = ref.watch(stockProvider);
+    final materials =
+        ref.watch(materialsProvider).value ?? const <ScrapMaterial>[];
     final isOwner = ref.watch(isOwnerProvider);
 
     return Scaffold(
       appBar: AppBar(
         title: const Text(AppStrings.stock),
         actions: [
+          if (isOwner)
+            IconButton(
+              tooltip: SaleStrings.garbageHistory,
+              icon: const Icon(Icons.delete_sweep_outlined),
+              onPressed: () => context.push(Routes.garbageHistory),
+            ),
           IconButton(
             tooltip: SaleStrings.sales,
             icon: const Icon(Icons.receipt_long_outlined),
@@ -130,14 +156,20 @@ class StockScreen extends ConsumerWidget {
               for (final i in items)
                 AppCard(
                   padding: EdgeInsets.zero,
-                  onTap: isOwner ? () => _adjust(context, ref, i) : null,
+                  onTap: isOwner
+                      ? () => _adjust(context, ref, i, materials)
+                      : null,
                   child: ListTile(
                     title: Text(i.materialName),
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          formatKg(i.weightGrams),
+                          formatStockQty(
+                            i.weightGrams,
+                            materials: materials,
+                            materialId: i.materialId,
+                          ),
                           style: AppTextStyles.cardAmount.copyWith(
                             color: i.weightGrams < 0 ? AppColors.error : null,
                           ),

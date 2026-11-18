@@ -6,6 +6,18 @@ String formatKg(int grams) => '${_trim(grams / 1000)} kg';
 /// 5000 grams -> "4 paka seer" (1 paka seer = 1250 g)
 String formatSeer(int grams) => '${_trim(grams / 1250)} paka seer';
 
+/// 5000 internal units -> "5 pcs" (1 piece = 1000 internal units)
+String formatPcs(int grams) => '${(grams / 1000).round()} pcs';
+
+/// Parses a strictly positive whole integer ("1", "2", "15").
+/// Rejects decimals ("1.5", "2,5"), zero, and negative numbers.
+int? parsePositiveInt(String? text) {
+  final s = (text ?? '').trim();
+  if (!RegExp(r'^\d+$').hasMatch(s)) return null;
+  final n = int.tryParse(s);
+  return (n == null || n <= 0) ? null : n;
+}
+
 /// 1234567 -> "Rs 1,234,567"
 String formatRs(int value) {
   final s = value.abs().toString();

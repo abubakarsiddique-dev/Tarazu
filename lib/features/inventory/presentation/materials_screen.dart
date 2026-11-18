@@ -20,7 +20,13 @@ class MaterialsScreen extends ConsumerWidget {
     ScrapMaterial? existing,
   }) async {
     final result = await showDialog<
-      ({String name, double rateKg, double ratePakaSeer, PriceUnit unit})
+      ({
+        String name,
+        double rateKg,
+        double ratePakaSeer,
+        double ratePiece,
+        PriceUnit unit,
+      })
     >(
       context: context,
       builder: (_) => _MaterialDialog(existing: existing),
@@ -33,6 +39,7 @@ class MaterialsScreen extends ConsumerWidget {
         result.rateKg,
         result.ratePakaSeer,
         result.unit,
+        ratePiece: result.ratePiece,
       );
     } else {
       actions.updateMaterial(
@@ -40,6 +47,7 @@ class MaterialsScreen extends ConsumerWidget {
         name: result.name,
         rateKg: result.rateKg,
         ratePakaSeer: result.ratePakaSeer,
+        ratePiece: result.ratePiece,
         priceUnit: result.unit,
       );
     }
@@ -101,6 +109,7 @@ class MaterialsScreen extends ConsumerWidget {
                 if (m.rateKg > 0) '${formatRate(m.rateKg)} / kg',
                 if (m.ratePakaSeer > 0)
                   '${formatRate(m.ratePakaSeer)} / paka seer',
+                if (m.ratePiece > 0) '${formatRate(m.ratePiece)} / piece',
               ];
               return AppCard(
                 padding: EdgeInsets.zero,
@@ -150,6 +159,7 @@ class _MaterialDialogState extends State<_MaterialDialog> {
   late final TextEditingController _name;
   late final TextEditingController _rateKg;
   late final TextEditingController _rateSeer;
+  late final TextEditingController _ratePiece;
   late PriceUnit _unit;
 
   static String _fmt(double v) =>
@@ -162,6 +172,7 @@ class _MaterialDialogState extends State<_MaterialDialog> {
     _name = TextEditingController(text: e?.name ?? '');
     _rateKg = TextEditingController(text: _fmt(e?.rateKg ?? 0));
     _rateSeer = TextEditingController(text: _fmt(e?.ratePakaSeer ?? 0));
+    _ratePiece = TextEditingController(text: _fmt(e?.ratePiece ?? 0));
     _unit = e?.priceUnit ?? PriceUnit.kg;
   }
 
@@ -170,6 +181,7 @@ class _MaterialDialogState extends State<_MaterialDialog> {
     _name.dispose();
     _rateKg.dispose();
     _rateSeer.dispose();
+    _ratePiece.dispose();
     super.dispose();
   }
 
@@ -179,6 +191,7 @@ class _MaterialDialogState extends State<_MaterialDialog> {
       name: _name.text.trim(),
       rateKg: parseNumber(_rateKg.text) ?? 0,
       ratePakaSeer: parseNumber(_rateSeer.text) ?? 0,
+      ratePiece: parseNumber(_ratePiece.text) ?? 0,
       unit: _unit,
     ));
   }
@@ -241,6 +254,17 @@ class _MaterialDialogState extends State<_MaterialDialog> {
                 ),
                 validator: _rateValidator,
               ),
+              const SizedBox(height: AppSpacing.md),
+              TextFormField(
+                controller: _ratePiece,
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                decoration: const InputDecoration(
+                  labelText: AppStrings.ratePerPiece,
+                ),
+                validator: _rateValidator,
+              ),
               const Padding(
                 padding: EdgeInsets.only(top: AppSpacing.sm),
                 child: Text(
@@ -263,6 +287,10 @@ class _MaterialDialogState extends State<_MaterialDialog> {
                   ButtonSegment(
                     value: PriceUnit.pakaSeer,
                     label: Text(AppStrings.perPakaSeer),
+                  ),
+                  ButtonSegment(
+                    value: PriceUnit.piece,
+                    label: Text(AppStrings.perPiece),
                   ),
                 ],
                 selected: {_unit},

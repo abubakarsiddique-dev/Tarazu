@@ -131,14 +131,23 @@ class InventoryActions {
     String name,
     double rateKg,
     double ratePakaSeer,
-    PriceUnit unit,
-  ) => _repo.addMaterial(_shopId, name, rateKg, ratePakaSeer, unit);
+    PriceUnit unit, {
+    double ratePiece = 0,
+  }) => _repo.addMaterial(
+    _shopId,
+    name,
+    rateKg,
+    ratePakaSeer,
+    unit,
+    ratePiece: ratePiece,
+  );
 
   void updateMaterial(
     String id, {
     String? name,
     double? rateKg,
     double? ratePakaSeer,
+    double? ratePiece,
     PriceUnit? priceUnit,
     bool? isActive,
   }) => _repo.updateMaterial(
@@ -147,6 +156,7 @@ class InventoryActions {
     name: name,
     rateKg: rateKg,
     ratePakaSeer: ratePakaSeer,
+    ratePiece: ratePiece,
     priceUnit: priceUnit,
     isActive: isActive,
   );

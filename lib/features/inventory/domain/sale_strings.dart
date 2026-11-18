@@ -14,7 +14,9 @@ class SaleStrings {
   static const chooseMaterial = 'Choose material';
   static const inStock = 'In stock';
   static const sellWeightKg = 'Weight to sell (kg)';
+  static const sellQuantityPcs = 'Quantity to sell (pieces / adad)';
   static const sellRatePerKg = 'Selling rate (Rs per kg)';
+  static const sellRatePerPiece = 'Selling rate (Rs per piece)';
   static const notEnoughStock = 'Itna stock mojood nahi hai';
   static const noStockToSell = 'Bechne ke liye abhi koi stock nahi hai.';
   static const noSalesToday = 'Aaj abhi koi sale nahi hui.';
@@ -31,6 +33,7 @@ class SaleStrings {
   static const adjustAdd = 'Add';
   static const adjustRemove = 'Remove';
   static const adjustWeightKg = 'Weight (kg)';
+  static const adjustQuantityPcs = 'Quantity (pieces / adad)';
   static const adjustNote = 'Note (optional)';
   static const adjustSave = 'Save';
   static const cancel = 'Cancel';
@@ -40,7 +43,14 @@ class SaleStrings {
   static const reasonGarbage = 'Garbage';
   static const reasonOpeningStock = 'Opening stock';
   static const costPerKgLabel = 'Cost per kg (Rs)';
+  static const costPerPieceLabel = 'Cost per piece (Rs)';
   static const recordGarbage = 'Garbage nikalo';
   static const remainingStock = 'Remaining stock';
   static const stockAdjusted = 'Stock adjusted';
+  static const garbageHistory = 'Garbage history';
+  static const garbageCost = 'Garbage cost';
+  static const noGarbageInPeriod = 'Is period mein koi garbage entry nahi hai.';
+  static const garbageEntries = 'Garbage entries';
+  static const recordedByOwner = 'Owner';
+  static const viewGarbageHistory = 'History';
 }

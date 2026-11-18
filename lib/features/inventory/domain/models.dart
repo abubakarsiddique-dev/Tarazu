@@ -14,14 +14,18 @@ String dayKey(DateTime d) =>
 /// The 1250 lives ONLY here. Change it here if the shops use a different cut.
 enum PriceUnit {
   kg(1000),
-  pakaSeer(1250);
+  pakaSeer(1250),
+  piece(1000);
 
   const PriceUnit(this.gramsPerUnit);
 
   final int gramsPerUnit;
 
-  static PriceUnit fromString(String? v) =>
-      v == 'pakaSeer' ? PriceUnit.pakaSeer : PriceUnit.kg;
+  static PriceUnit fromString(String? v) => switch (v) {
+        'pakaSeer' => PriceUnit.pakaSeer,
+        'piece' => PriceUnit.piece,
+        _ => PriceUnit.kg,
+      };
 }
 
 /// Money = whole rupees, weight = whole grams (integers), so totals built from
@@ -36,6 +40,7 @@ class ScrapMaterial {
     required this.name,
     required this.rateKg,
     required this.ratePakaSeer,
+    this.ratePiece = 0,
     required this.priceUnit,
     required this.isActive,
   });
@@ -49,11 +54,18 @@ class ScrapMaterial {
   /// Fixed rate in Rs per paka seer (0 = not set).
   final double ratePakaSeer;
 
+  /// Fixed rate in Rs per piece (0 = not set).
+  final double ratePiece;
+
   /// Which unit is pre-selected when this material is added to a slip.
   final PriceUnit priceUnit;
   final bool isActive;
 
-  double rateFor(PriceUnit unit) => unit == PriceUnit.pakaSeer ? ratePakaSeer : rateKg;
+  double rateFor(PriceUnit unit) => switch (unit) {
+        PriceUnit.pakaSeer => ratePakaSeer,
+        PriceUnit.piece => ratePiece,
+        PriceUnit.kg => rateKg,
+      };
 
   /// Rate of the default unit.
   double get rate => rateFor(priceUnit);
@@ -69,11 +81,25 @@ class ScrapMaterial {
       rateKg: (m['rateKg'] as num?)?.toDouble() ?? (unit == PriceUnit.kg ? legacy : 0),
       ratePakaSeer:
           (m['ratePakaSeer'] as num?)?.toDouble() ?? (unit == PriceUnit.pakaSeer ? legacy : 0),
+      ratePiece:
+          (m['ratePiece'] as num?)?.toDouble() ?? (unit == PriceUnit.piece ? legacy : 0),
       priceUnit: unit,
       isActive: m['isActive'] as bool? ?? true,
     );
   }
 }
+
+/// True when [materialId] is configured with [PriceUnit.piece].
+bool isPieceMaterial(Iterable<ScrapMaterial> materials, String materialId) =>
+    materials.any((m) => m.id == materialId && m.priceUnit == PriceUnit.piece);
+
+/// Formats [grams] as `"5 pcs"` for piece-based materials or `"5 kg"` otherwise.
+String formatStockQty(
+  int grams, {
+  required Iterable<ScrapMaterial> materials,
+  required String materialId,
+}) =>
+    isPieceMaterial(materials, materialId) ? formatPcs(grams) : formatKg(grams);
 
 /// One line on a purchase slip.
 class PurchaseItem {
@@ -113,10 +139,15 @@ class PurchaseItem {
         amount: (m['amount'] as num?)?.toInt() ?? 0,
       );
 
-  /// "12.5 kg × Rs 40"  or  "5 kg → 4 paka seer × Rs 200"
-  String get detail => unit == PriceUnit.pakaSeer
-      ? '${formatKg(weightGrams)} → ${formatSeer(weightGrams)} × ${formatRate(rate)}'
-      : '${formatKg(weightGrams)} × ${formatRate(rate)}';
+  /// "12.5 kg × Rs 40", "5 kg → 4 paka seer × Rs 200", or "5 pcs × Rs 120"
+  String get detail => switch (unit) {
+        PriceUnit.pakaSeer =>
+          '${formatKg(weightGrams)} → ${formatSeer(weightGrams)} × ${formatRate(rate)}',
+        PriceUnit.piece =>
+          '${formatPcs(weightGrams)} × ${formatRate(rate)}',
+        PriceUnit.kg =>
+          '${formatKg(weightGrams)} × ${formatRate(rate)}',
+      };
 }
 
 /// A purchase slip: one customer, one or more items, one total.

@@ -103,7 +103,11 @@ class AppStrings {
   static const tapAddItemFirst = 'Tap "Add item to slip" first, or clear the weight.';
   static const perKg = 'Per kg';
   static const perPakaSeer = 'Per paka seer';
+  static const perPiece = 'Per piece';
   static const ratePerPakaSeer = 'Rate per paka seer (Rs)';
+  static const ratePerPiece = 'Rate per piece (Rs)';
+  static const quantityPieces = 'Quantity (pieces / adad)';
+  static const invalidWholeNumber = 'Poora number likhein (1, 2, 3...)';
   static const rateIs = 'Rate is';
   static const fixedRates = 'Fixed rates (set one or both)';
   static const defaultUnit = 'Default unit on slip';

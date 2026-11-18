@@ -59,7 +59,19 @@ class _NewSaleScreenState extends ConsumerState<NewSaleScreen> {
 
   int get _totalGrams => _items.fold(0, (s, i) => s + i.weightGrams);
 
+  bool _isMaterialPiece(String? materialId) {
+    if (materialId == null) return false;
+    final materials =
+        ref.read(materialsProvider).value ?? const <ScrapMaterial>[];
+    return isPieceMaterial(materials, materialId);
+  }
+
   int? get _grams {
+    if (_isMaterialPiece(_materialId)) {
+      final pcs = parsePositiveInt(_weight.text);
+      if (pcs == null || pcs <= 0) return null;
+      return pcs * 1000;
+    }
     final kg = parseNumber(_weight.text);
     if (kg == null || kg <= 0) return null;
     return (kg * 1000).round();
@@ -118,7 +130,10 @@ class _NewSaleScreenState extends ConsumerState<NewSaleScreen> {
       _editing = (index: targetIndex, item: item);
       _materialId = item.materialId;
       _showMaterialError = false;
-      _weight.text = _fmt(item.weightGrams / 1000);
+      _weight.text =
+          (item.unit == PriceUnit.piece || _isMaterialPiece(item.materialId))
+          ? '${(item.weightGrams / 1000).round()}'
+          : _fmt(item.weightGrams / 1000);
       _rate.text = _fmt(item.ratePerKg);
     });
     _weightFocus.requestFocus();
@@ -188,12 +203,14 @@ class _NewSaleScreenState extends ConsumerState<NewSaleScreen> {
     final grams = _grams!;
     if (grams > remainingGrams) return; // validator already shows the message
     final rate = parseNumber(_rate.text)!;
+    final isPiece = _isMaterialPiece(material.materialId);
     final newItem = SaleItem(
       materialId: material.materialId,
       materialName: material.materialName,
       weightGrams: grams,
       ratePerKg: rate,
       amount: computeAmount(grams, rate),
+      unit: isPiece ? PriceUnit.piece : PriceUnit.kg,
     );
     setState(() {
       final currentEdit = _editing;
@@ -292,6 +309,8 @@ class _NewSaleScreenState extends ConsumerState<NewSaleScreen> {
     }
 
     final stock = stockAsync.value ?? const <StockItem>[];
+    final materials =
+        ref.watch(materialsProvider).value ?? const <ScrapMaterial>[];
     final sellable = stock
         .where((s) => remainingToSell(stock, _items, s.materialId) > 0)
         .toList();
@@ -309,9 +328,18 @@ class _NewSaleScreenState extends ConsumerState<NewSaleScreen> {
     final selected = stock
         .where((s) => s.materialId == _materialId)
         .firstOrNull;
+    final isPiece =
+        selected != null && isPieceMaterial(materials, selected.materialId);
     final remaining = selected == null
         ? 0
         : remainingToSell(stock, _items, selected.materialId);
+    final remLabel = selected == null
+        ? ''
+        : formatStockQty(
+            remaining,
+            materials: materials,
+            materialId: selected.materialId,
+          );
     final grams = _grams;
     final rateNum = parseNumber(_rate.text);
     final lineTotal = _lineTotal;
@@ -408,7 +436,7 @@ class _NewSaleScreenState extends ConsumerState<NewSaleScreen> {
                                     child: ChoiceChip(
                                       label: Text(
                                         isOwner
-                                            ? '${s.materialName} • ${formatKg(remainingToSell(stock, _items, s.materialId))}'
+                                            ? '${s.materialName} • ${formatStockQty(remainingToSell(stock, _items, s.materialId), materials: materials, materialId: s.materialId)}'
                                             : s.materialName,
                                       ),
                                       selected: _materialId == s.materialId,
@@ -487,7 +515,7 @@ class _NewSaleScreenState extends ConsumerState<NewSaleScreen> {
                                           ),
                                           const SizedBox(width: AppSpacing.sm),
                                           Text(
-                                            formatKg(remaining),
+                                            remLabel,
                                             style: AppTextStyles.cardAmount
                                                 .copyWith(
                                                   color: notEnough
@@ -524,7 +552,11 @@ class _NewSaleScreenState extends ConsumerState<NewSaleScreen> {
                                               width: AppSpacing.sm,
                                             ),
                                             Text(
-                                              formatKg(remaining - grams),
+                                              formatStockQty(
+                                                remaining - grams,
+                                                materials: materials,
+                                                materialId: selected.materialId,
+                                              ),
                                               style: AppTextStyles.cardAmount
                                                   .copyWith(
                                                     color: notEnough
@@ -550,10 +582,11 @@ class _NewSaleScreenState extends ConsumerState<NewSaleScreen> {
                                     TextFormField(
                                       controller: _weight,
                                       focusNode: _weightFocus,
-                                      keyboardType:
-                                          const TextInputType.numberWithOptions(
-                                            decimal: true,
-                                          ),
+                                      keyboardType: isPiece
+                                          ? TextInputType.number
+                                          : const TextInputType.numberWithOptions(
+                                              decimal: true,
+                                            ),
                                       textInputAction: TextInputAction.next,
                                       style: AppTextStyles.statNumber,
                                       onChanged: (_) {
@@ -563,13 +596,28 @@ class _NewSaleScreenState extends ConsumerState<NewSaleScreen> {
                                       onFieldSubmitted: (_) =>
                                           _rateFocus.requestFocus(),
                                       decoration: InputDecoration(
-                                        labelText: SaleStrings.sellWeightKg,
-                                        suffixText: 'kg',
+                                        labelText: isPiece
+                                            ? SaleStrings.sellQuantityPcs
+                                            : SaleStrings.sellWeightKg,
+                                        suffixText: isPiece ? 'pcs' : 'kg',
                                         helperText: isOwner
-                                            ? '${SaleStrings.inStock}: ${formatKg(remaining)}'
+                                            ? '${SaleStrings.inStock}: $remLabel'
                                             : null,
                                       ),
                                       validator: (v) {
+                                        if (isPiece) {
+                                          final pcs = parsePositiveInt(v);
+                                          if (pcs == null ||
+                                              pcs <= 0 ||
+                                              pcs > 1000000) {
+                                            return AppStrings
+                                                .invalidWholeNumber;
+                                          }
+                                          if (pcs * 1000 > remaining) {
+                                            return SaleStrings.notEnoughStock;
+                                          }
+                                          return null;
+                                        }
                                         final kg = parseNumber(v);
                                         if (kg == null ||
                                             kg <= 0 ||
@@ -595,8 +643,10 @@ class _NewSaleScreenState extends ConsumerState<NewSaleScreen> {
                                       onChanged: (_) => setState(() {}),
                                       onFieldSubmitted: (_) =>
                                           _addItem(selected, remaining),
-                                      decoration: const InputDecoration(
-                                        labelText: SaleStrings.sellRatePerKg,
+                                      decoration: InputDecoration(
+                                        labelText: isPiece
+                                            ? SaleStrings.sellRatePerPiece
+                                            : SaleStrings.sellRatePerKg,
                                         prefixText: 'Rs ',
                                       ),
                                       validator: (v) {
@@ -651,7 +701,9 @@ class _NewSaleScreenState extends ConsumerState<NewSaleScreen> {
                                             ),
                                             const SizedBox(height: 2),
                                             Text(
-                                              '${formatKg(grams)} × ${formatRate(rateNum)}',
+                                              isPiece
+                                                  ? '${formatPcs(grams)} × ${formatRate(rateNum)}'
+                                                  : '${formatKg(grams)} × ${formatRate(rateNum)}',
                                               style: theme.textTheme.bodySmall
                                                   ?.copyWith(
                                                     color: AppColors

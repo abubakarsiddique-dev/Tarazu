@@ -19,10 +19,20 @@ void main() {
       expect(computeAmount(12500, 40), 500);
       expect(computeAmount(12500, 40, PriceUnit.kg), 500);
     });
+    test('piece pricing: 5 pieces at Rs 120 = Rs 600 and whole number parsing', () {
+      expect(parsePositiveInt('5'), 5);
+      expect(parsePositiveInt('1'), 1);
+      expect(parsePositiveInt('0'), isNull);
+      expect(parsePositiveInt('-3'), isNull);
+      expect(parsePositiveInt('2.5'), isNull);
+      expect(parsePositiveInt('2,5'), isNull);
+      expect(formatPcs(5000), '5 pcs');
+      expect(computeAmount(5000, 120, PriceUnit.piece), 600);
+    });
   });
 
   group('PurchaseItem', () {
-    test('detail text for kg and paka seer lines', () {
+    test('detail text for kg, paka seer and piece lines', () {
       const kg = PurchaseItem(
         materialId: 'a', materialName: 'Iron', weightGrams: 12500,
         unit: PriceUnit.kg, rate: 40, amount: 500,
@@ -31,8 +41,13 @@ void main() {
         materialId: 'b', materialName: 'Bones', weightGrams: 5000,
         unit: PriceUnit.pakaSeer, rate: 200, amount: 800,
       );
+      const pc = PurchaseItem(
+        materialId: 'c', materialName: 'Oil Can', weightGrams: 5000,
+        unit: PriceUnit.piece, rate: 120, amount: 600,
+      );
       expect(kg.detail, '12.5 kg × Rs 40');
       expect(seer.detail, '5 kg → 4 paka seer × Rs 200');
+      expect(pc.detail, '5 pcs × Rs 120');
     });
 
     test('toMap / fromMap round trip', () {

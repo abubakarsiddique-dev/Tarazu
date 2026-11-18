@@ -26,6 +26,7 @@ Future<StockAdjustmentResult?> showAdjustStockDialog(
   BuildContext context, {
   StockItem? item,
   List<StockItem>? items,
+  Iterable<ScrapMaterial> materials = const <ScrapMaterial>[],
   bool initialAdd = true,
   AdjustmentReason initialReason = AdjustmentReason.correction,
   bool lockReason = false,
@@ -39,6 +40,7 @@ Future<StockAdjustmentResult?> showAdjustStockDialog(
     builder: (_) => AdjustStockDialog(
       item: item,
       items: items,
+      materials: materials,
       initialAdd: initialAdd,
       initialReason: initialReason,
       lockReason: lockReason,
@@ -51,6 +53,7 @@ class AdjustStockDialog extends StatefulWidget {
     super.key,
     this.item,
     this.items,
+    this.materials = const <ScrapMaterial>[],
     this.initialAdd = true,
     this.initialReason = AdjustmentReason.correction,
     this.lockReason = false,
@@ -62,6 +65,9 @@ class AdjustStockDialog extends StatefulWidget {
   /// Selectable materials when opened from the Home quick-garbage tile.
   /// No default material is preselected when [item] is null.
   final List<StockItem>? items;
+
+  /// Used to format and validate piece-based materials as whole pieces.
+  final Iterable<ScrapMaterial> materials;
 
   final bool initialAdd;
   final AdjustmentReason initialReason;
@@ -106,7 +112,19 @@ class _AdjustStockDialogState extends State<AdjustStockDialog> {
     AdjustmentReason.openingStock => SaleStrings.reasonOpeningStock,
   };
 
+  bool get _isSelectedPiece =>
+      _selectedItem != null &&
+      isPieceMaterial(widget.materials, _selectedItem!.materialId);
+
+  String _fmtQty(int grams, String materialId) =>
+      formatStockQty(grams, materials: widget.materials, materialId: materialId);
+
   int? get _parsedGrams {
+    if (_isSelectedPiece) {
+      final pcs = parsePositiveInt(_weight.text);
+      if (pcs == null || pcs <= 0 || pcs > 1000000) return null;
+      return pcs * 1000;
+    }
     final kg = parseNumber(_weight.text);
     if (kg == null || kg <= 0 || kg > 1000000) return null;
     return (kg * 1000).round();
@@ -141,7 +159,7 @@ class _AdjustStockDialogState extends State<AdjustStockDialog> {
     if (selected == null) return;
     if (_add && _reason == AdjustmentReason.garbage) return;
     if (!_add && _reason == AdjustmentReason.openingStock) return;
-    final grams = (parseNumber(_weight.text)! * 1000).round();
+    final grams = _parsedGrams!;
     double? costPerKg;
     if (_reason == AdjustmentReason.openingStock) {
       costPerKg = parseNumber(_cost.text);
@@ -160,6 +178,7 @@ class _AdjustStockDialogState extends State<AdjustStockDialog> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final selected = _selectedItem;
+    final isPiece = _isSelectedPiece;
     final current = selected?.weightGrams ?? 0;
     final grams = _parsedGrams;
     final notEnough =
@@ -207,7 +226,7 @@ class _AdjustStockDialogState extends State<AdjustStockDialog> {
                       DropdownMenuItem<StockItem>(
                         value: m,
                         child: Text(
-                          '${m.materialName} (${formatKg(m.weightGrams)})',
+                          '${m.materialName} (${_fmtQty(m.weightGrams, m.materialId)})',
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
@@ -252,7 +271,7 @@ class _AdjustStockDialogState extends State<AdjustStockDialog> {
                           ),
                           const SizedBox(width: AppSpacing.sm),
                           Text(
-                            formatKg(current),
+                            _fmtQty(current, selected.materialId),
                             style: AppTextStyles.cardAmount.copyWith(
                               color: notEnough
                                   ? AppColors.onErrorContainer
@@ -279,7 +298,7 @@ class _AdjustStockDialogState extends State<AdjustStockDialog> {
                             ),
                             const SizedBox(width: AppSpacing.sm),
                             Text(
-                              formatKg(remainingGrams),
+                              _fmtQty(remainingGrams, selected.materialId),
                               style: AppTextStyles.cardAmount.copyWith(
                                 color: notEnough || remainingGrams < 0
                                     ? AppColors.error
@@ -328,16 +347,18 @@ class _AdjustStockDialogState extends State<AdjustStockDialog> {
                 const SizedBox(height: AppSpacing.md),
               ],
 
-              // 4. Weight (kg) input
+              // 4. Weight (kg) / Quantity (pcs) input
               TextFormField(
                 controller: _weight,
                 autofocus: widget.item != null,
                 enabled: !_saving,
-                keyboardType: const TextInputType.numberWithOptions(
-                  decimal: true,
-                ),
-                decoration: const InputDecoration(
-                  labelText: SaleStrings.adjustWeightKg,
+                keyboardType: isPiece
+                    ? TextInputType.number
+                    : const TextInputType.numberWithOptions(decimal: true),
+                decoration: InputDecoration(
+                  labelText: isPiece
+                      ? SaleStrings.adjustQuantityPcs
+                      : SaleStrings.adjustWeightKg,
                 ),
                 onChanged: (_) {
                   setState(() {});
@@ -346,6 +367,18 @@ class _AdjustStockDialogState extends State<AdjustStockDialog> {
                   }
                 },
                 validator: (v) {
+                  if (isPiece) {
+                    final pcs = parsePositiveInt(v);
+                    if (pcs == null || pcs <= 0 || pcs > 1000000) {
+                      return AppStrings.invalidWholeNumber;
+                    }
+                    final g = pcs * 1000;
+                    final cur = _selectedItem?.weightGrams ?? 0;
+                    if (!_add && g > math.max(cur, 0)) {
+                      return SaleStrings.notEnoughStock;
+                    }
+                    return null;
+                  }
                   final kg = parseNumber(v);
                   if (kg == null || kg <= 0 || kg > 1000000) {
                     return AppStrings.invalidNumber;
@@ -386,7 +419,7 @@ class _AdjustStockDialogState extends State<AdjustStockDialog> {
                   ],
                 ),
 
-              // 6. Cost per kg (only for openingStock)
+              // 6. Cost per kg / piece (only for openingStock)
               if (_reason == AdjustmentReason.openingStock) ...[
                 const SizedBox(height: AppSpacing.md),
                 TextFormField(
@@ -395,8 +428,10 @@ class _AdjustStockDialogState extends State<AdjustStockDialog> {
                   keyboardType: const TextInputType.numberWithOptions(
                     decimal: true,
                   ),
-                  decoration: const InputDecoration(
-                    labelText: SaleStrings.costPerKgLabel,
+                  decoration: InputDecoration(
+                    labelText: isPiece
+                        ? SaleStrings.costPerPieceLabel
+                        : SaleStrings.costPerKgLabel,
                   ),
                   onChanged: (_) => setState(() {}),
                   validator: (v) {

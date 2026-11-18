@@ -47,8 +47,20 @@ void main() {
       expect(copy.amount, 625); // 12.5 kg * Rs 50
     });
 
-    test('detail reads like the purchase lines', () {
+    test('detail reads like the purchase lines (kg and piece)', () {
       expect(_line('iron', 12500).detail, '12.5 kg × Rs 50');
+      const pcSale = SaleItem(
+        materialId: 'can',
+        materialName: 'Oil Can',
+        weightGrams: 4000,
+        ratePerKg: 150,
+        amount: 600,
+        unit: PriceUnit.piece,
+      );
+      expect(pcSale.detail, '4 pcs × Rs 150');
+      final copy = SaleItem.fromMap(Map<String, dynamic>.from(pcSale.toMap()));
+      expect(copy.unit, PriceUnit.piece);
+      expect(copy.detail, '4 pcs × Rs 150');
     });
   });
 }

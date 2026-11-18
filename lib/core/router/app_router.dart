@@ -23,6 +23,7 @@ import '../../features/inventory/presentation/report_screen.dart';
 import '../../features/finance/presentation/expenses_screen.dart';
 import '../../features/finance/presentation/profit_screen.dart';
 import '../../features/auth/application/auth_providers.dart';
+import '../../features/inventory/presentation/garbage_history_screen.dart';
 import '../../features/staff/presentation/staff_summary_screen.dart';
 
 class Routes {
@@ -46,6 +47,7 @@ class Routes {
   static const expenses = '/expenses';
   static const staff = '/staff';
   static const staffSummary = '/staff-summary';
+  static const garbageHistory = '/garbage-history';
 }
 
 const _publicAuthPages = [Routes.login, Routes.register, Routes.forgotPassword];
@@ -62,6 +64,7 @@ const _ownerOnlyPages = [
   // Routes.staff, Routes.report, Routes.profit, Routes.expenses,
   // Routes.history, Routes.sales, Routes.materials, Routes.staffSummary,
   Routes.stock,
+  Routes.garbageHistory,
 ];
 
 /// Redirect rules, extracted so they can be unit tested.
@@ -143,6 +146,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: Routes.profit, builder: (_, _) => const ProfitScreen()),
       GoRoute(path: Routes.staff, builder: (_, _) => const StaffScreen()),
       GoRoute(path: Routes.expenses, builder: (_, _) => const ExpensesScreen()),
+      GoRoute(
+        path: Routes.garbageHistory,
+        builder: (_, _) => const GarbageHistoryScreen(),
+      ),
       GoRoute(
         path: Routes.disabled,
         builder: (_, _) => const AccountBlockedScreen(

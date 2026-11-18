@@ -75,6 +75,10 @@ class _AddPurchaseScreenState extends ConsumerState<AddPurchaseScreen> {
   }
 
   int? get _grams {
+    if (_unit == PriceUnit.piece) {
+      final pcs = parsePositiveInt(_weight.text);
+      return pcs == null ? null : pcs * 1000;
+    }
     final kg = parseNumber(_weight.text);
     return kg == null ? null : (kg * 1000).round();
   }
@@ -124,6 +128,7 @@ class _AddPurchaseScreenState extends ConsumerState<AddPurchaseScreen> {
       name: item.materialName,
       rateKg: item.unit == PriceUnit.kg ? item.rate : 0,
       ratePakaSeer: item.unit == PriceUnit.pakaSeer ? item.rate : 0,
+      ratePiece: item.unit == PriceUnit.piece ? item.rate : 0,
       priceUnit: item.unit,
       isActive: true,
     );
@@ -133,7 +138,9 @@ class _AddPurchaseScreenState extends ConsumerState<AddPurchaseScreen> {
       _selected = matched ?? fallback;
       _unit = item.unit;
       _showMaterialError = false;
-      _weight.text = _fmt(item.weightGrams / 1000);
+      _weight.text = item.unit == PriceUnit.piece
+          ? '${(item.weightGrams / 1000).round()}'
+          : _fmt(item.weightGrams / 1000);
       _rate.text = _fmt(item.rate);
     });
     _weightFocus.requestFocus();
@@ -328,6 +335,7 @@ class _AddPurchaseScreenState extends ConsumerState<AddPurchaseScreen> {
 
     final selected = _selected;
     final isSeer = selected != null && _unit == PriceUnit.pakaSeer;
+    final isPiece = selected != null && _unit == PriceUnit.piece;
     final lineTotal = _lineTotal;
     final grams = _grams;
     final rateNum = parseNumber(_rate.text);
@@ -447,7 +455,7 @@ class _AddPurchaseScreenState extends ConsumerState<AddPurchaseScreen> {
                               ),
                             ),
 
-                          // Price Unit Selector (Kg vs Paka Seer)
+                          // Price Unit Selector (Kg vs Paka Seer vs Piece)
                           if (selected != null) ...[
                             const SizedBox(height: AppSpacing.lg),
                             Text(
@@ -473,6 +481,14 @@ class _AddPurchaseScreenState extends ConsumerState<AddPurchaseScreen> {
                                         : AppStrings.perPakaSeer,
                                   ),
                                 ),
+                                ButtonSegment(
+                                  value: PriceUnit.piece,
+                                  label: Text(
+                                    selected.ratePiece > 0
+                                        ? '${AppStrings.perPiece} (${formatRate(selected.ratePiece)})'
+                                        : AppStrings.perPiece,
+                                  ),
+                                ),
                               ],
                               selected: {_unit},
                               onSelectionChanged: (s) => _setUnit(s.first),
@@ -490,20 +506,31 @@ class _AddPurchaseScreenState extends ConsumerState<AddPurchaseScreen> {
                                 TextFormField(
                                   controller: _weight,
                                   focusNode: _weightFocus,
-                                  keyboardType:
-                                      const TextInputType.numberWithOptions(
-                                        decimal: true,
-                                      ),
+                                  keyboardType: isPiece
+                                      ? TextInputType.number
+                                      : const TextInputType.numberWithOptions(
+                                          decimal: true,
+                                        ),
                                   textInputAction: TextInputAction.next,
                                   style: AppTextStyles.statNumber,
                                   onChanged: (_) => setState(() {}),
                                   onFieldSubmitted: (_) =>
                                       _rateFocus.requestFocus(),
-                                  decoration: const InputDecoration(
-                                    labelText: AppStrings.scaleWeight,
-                                    suffixText: 'kg',
+                                  decoration: InputDecoration(
+                                    labelText: isPiece
+                                        ? AppStrings.quantityPieces
+                                        : AppStrings.scaleWeight,
+                                    suffixText: isPiece ? 'pcs' : 'kg',
                                   ),
                                   validator: (v) {
+                                    if (isPiece) {
+                                      final pcs = parsePositiveInt(v);
+                                      return (pcs == null ||
+                                              pcs <= 0 ||
+                                              pcs > 100000)
+                                          ? AppStrings.invalidWholeNumber
+                                          : null;
+                                    }
                                     final n = parseNumber(v);
                                     return (n == null ||
                                             n <= 0 ||
@@ -590,9 +617,11 @@ class _AddPurchaseScreenState extends ConsumerState<AddPurchaseScreen> {
                                   onChanged: (_) => setState(() {}),
                                   onFieldSubmitted: (_) => _addItem(),
                                   decoration: InputDecoration(
-                                    labelText: isSeer
-                                        ? AppStrings.ratePerPakaSeer
-                                        : AppStrings.ratePerKg,
+                                    labelText: isPiece
+                                        ? AppStrings.ratePerPiece
+                                        : (isSeer
+                                              ? AppStrings.ratePerPakaSeer
+                                              : AppStrings.ratePerKg),
                                     prefixText: 'Rs ',
                                   ),
                                   validator: (v) {
@@ -647,9 +676,11 @@ class _AddPurchaseScreenState extends ConsumerState<AddPurchaseScreen> {
                                         ),
                                         const SizedBox(height: 2),
                                         Text(
-                                          isSeer
-                                              ? '${formatKg(grams)} → ${formatSeer(grams)} × ${formatRate(rateNum)}'
-                                              : '${formatKg(grams)} × ${formatRate(rateNum)}',
+                                          isPiece
+                                              ? '${formatPcs(grams)} × ${formatRate(rateNum)}'
+                                              : (isSeer
+                                                    ? '${formatKg(grams)} → ${formatSeer(grams)} × ${formatRate(rateNum)}'
+                                                    : '${formatKg(grams)} × ${formatRate(rateNum)}'),
                                           style: theme.textTheme.bodySmall
                                               ?.copyWith(
                                                 color: AppColors
@@ -962,7 +993,11 @@ class _MaterialChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final defaultRate = material.rate;
-    final unitSuffix = material.priceUnit == PriceUnit.pakaSeer ? '/seer' : '';
+    final unitSuffix = switch (material.priceUnit) {
+      PriceUnit.pakaSeer => '/seer',
+      PriceUnit.piece => '/pc',
+      PriceUnit.kg => '',
+    };
     final labelText = defaultRate > 0
         ? '${material.name} • ${formatRate(defaultRate)}$unitSuffix'
         : material.name;

@@ -3,7 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../core/utils/format.dart';
 import 'models.dart';
 
-/// One line on a sale: weight leaving the shop, priced per kg.
+/// One line on a sale: weight/quantity leaving the shop.
 class SaleItem {
   const SaleItem({
     required this.materialId,
@@ -11,6 +11,7 @@ class SaleItem {
     required this.weightGrams,
     required this.ratePerKg,
     required this.amount,
+    this.unit = PriceUnit.kg,
   });
 
   final String materialId;
@@ -18,6 +19,7 @@ class SaleItem {
   final int weightGrams;
   final double ratePerKg;
   final int amount;
+  final PriceUnit unit;
 
   Map<String, Object?> toMap() => {
         'materialId': materialId,
@@ -25,6 +27,7 @@ class SaleItem {
         'weightGrams': weightGrams,
         'ratePerKg': ratePerKg,
         'amount': amount,
+        if (unit != PriceUnit.kg) 'unit': unit.name,
       };
 
   factory SaleItem.fromMap(Map<String, dynamic> m) => SaleItem(
@@ -33,10 +36,13 @@ class SaleItem {
         weightGrams: (m['weightGrams'] as num?)?.toInt() ?? 0,
         ratePerKg: (m['ratePerKg'] as num?)?.toDouble() ?? 0,
         amount: (m['amount'] as num?)?.toInt() ?? 0,
+        unit: PriceUnit.fromString(m['unit'] as String?),
       );
 
-  /// "12.5 kg × Rs 55"
-  String get detail => '${formatKg(weightGrams)} × ${formatRate(ratePerKg)}';
+  /// "12.5 kg × Rs 55" or "5 pcs × Rs 150"
+  String get detail => unit == PriceUnit.piece
+      ? '${formatPcs(weightGrams)} × ${formatRate(ratePerKg)}'
+      : '${formatKg(weightGrams)} × ${formatRate(ratePerKg)}';
 }
 
 /// A sale (dispatch) to a bigger dealer or factory: one buyer, 1..n items.

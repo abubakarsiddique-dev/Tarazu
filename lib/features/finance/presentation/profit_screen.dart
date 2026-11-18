@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../core/router/app_router.dart';
 import '../../../core/utils/format.dart';
 import '../../inventory/domain/history.dart';
 import '../../inventory/domain/models.dart' show dayKey;
+import '../../inventory/domain/sale_strings.dart';
 import '../application/finance_providers.dart';
 import '../domain/finance_strings.dart';
 import '../domain/profit.dart';
@@ -153,6 +156,44 @@ class _Body extends StatelessWidget {
                   color: report.grossProfit < 0 ? bad : null,
                 ),
                 line(FinanceStrings.stockLoss, '- ${formatRs(report.lossCost)}'),
+                InkWell(
+                  onTap: () => context.push(Routes.garbageHistory),
+                  borderRadius: BorderRadius.circular(6),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.delete_sweep_outlined, size: 18),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            report.garbageGrams > 0
+                                ? '${SaleStrings.garbageHistory} (${formatKg(report.garbageGrams)})'
+                                : SaleStrings.garbageHistory,
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: theme.colorScheme.primary,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                        if (report.garbageGrams > 0)
+                          Text(
+                            '${FinanceStrings.cost} ${formatRs(report.garbageCost)}',
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: theme.colorScheme.primary,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        const SizedBox(width: 4),
+                        Icon(
+                          Icons.chevron_right_rounded,
+                          size: 18,
+                          color: theme.colorScheme.primary,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
                 line(FinanceStrings.expenses, '- ${formatRs(expenses)}'),
                 const Divider(),
                 line(

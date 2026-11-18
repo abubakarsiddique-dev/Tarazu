@@ -84,9 +84,12 @@ class HomeScreen extends ConsumerWidget {
         );
       return;
     }
+    final materials =
+        ref.read(materialsProvider).value ?? const <ScrapMaterial>[];
     final result = await showAdjustStockDialog(
       context,
       items: positiveItems,
+      materials: materials,
       initialAdd: false,
       initialReason: AdjustmentReason.garbage,
       lockReason: true,
@@ -102,12 +105,22 @@ class HomeScreen extends ConsumerWidget {
         );
     if (!context.mounted) return;
     final remaining = result.item.weightGrams + result.deltaGrams;
+    final remLabel = formatStockQty(
+      remaining,
+      materials: materials,
+      materialId: result.item.materialId,
+    );
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(
         SnackBar(
           content: Text(
-            '${result.item.materialName}: ${SaleStrings.remainingStock} ${formatKg(remaining)}',
+            '${result.item.materialName}: ${SaleStrings.remainingStock} $remLabel',
+          ),
+          action: SnackBarAction(
+            label: SaleStrings.viewGarbageHistory,
+            textColor: AppColors.primaryContainer,
+            onPressed: () => context.push(Routes.garbageHistory),
           ),
         ),
       );

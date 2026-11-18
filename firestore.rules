@@ -105,7 +105,7 @@ service cloud.firestore {
 
         allow create: if isShopOwner(shopId)
           && request.resource.data.keys().hasOnly(
-               ['name','rate','rateKg','ratePakaSeer','priceUnit','isActive','createdAt'])
+               ['name','rate','rateKg','ratePakaSeer','ratePiece','priceUnit','isActive','createdAt'])
           && request.resource.data.name is string
           && request.resource.data.name.size() > 0
           && request.resource.data.name.size() <= 60
@@ -115,12 +115,14 @@ service cloud.firestore {
           && request.resource.data.rateKg >= 0
           && request.resource.data.ratePakaSeer is number
           && request.resource.data.ratePakaSeer >= 0
-          && request.resource.data.priceUnit in ['kg','pakaSeer']
+          && (!('ratePiece' in request.resource.data)
+              || (request.resource.data.ratePiece is number && request.resource.data.ratePiece >= 0))
+          && request.resource.data.priceUnit in ['kg','pakaSeer','piece']
           && request.resource.data.isActive is bool;
 
         allow update: if isShopOwner(shopId)
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name','rate','rateKg','ratePakaSeer','priceUnit','isActive'])
-          && (!('priceUnit' in request.resource.data) || request.resource.data.priceUnit in ['kg','pakaSeer']);
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name','rate','rateKg','ratePakaSeer','ratePiece','priceUnit','isActive'])
+          && (!('priceUnit' in request.resource.data) || request.resource.data.priceUnit in ['kg','pakaSeer','piece']);
 
         allow delete: if false;
       }
