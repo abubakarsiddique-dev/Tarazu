@@ -379,6 +379,19 @@ class HomeScreen extends ConsumerWidget {
                 onTap: () => _recordGarbage(context, ref, stockAsync),
               ),
             ),
+            const SizedBox(height: AppSpacing.sm),
+            _NavRow(
+              left: _NavTile(
+                icon: Icons.calculate_outlined,
+                label: FinanceStrings.netProfit,
+                onTap: () => context.push(Routes.netProfit),
+              ),
+              right: _NavTile(
+                icon: Icons.manage_history_outlined,
+                label: SaleStrings.garbageHistory,
+                onTap: () => context.push(Routes.garbageHistory),
+              ),
+            ),
           ],
 
           // 5. Today's Purchases List
