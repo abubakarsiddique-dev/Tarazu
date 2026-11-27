@@ -27,7 +27,8 @@ class SaleStrings {
   static const waitingToSync = 'Waiting to sync';
   static const keep = 'Keep';
   static const yesCancel = 'Haan, cancel karein';
-  static const negativeStockWarning = 'Stock is below zero. Check your entries.';
+  static const negativeStockWarning =
+      'Stock is below zero. Check your entries.';
 
   static const adjustStock = 'Adjust stock';
   static const adjustAdd = 'Add';
@@ -44,7 +45,7 @@ class SaleStrings {
   static const reasonOpeningStock = 'Opening stock';
   static const costPerKgLabel = 'Cost per kg (Rs)';
   static const costPerPieceLabel = 'Cost per piece (Rs)';
-  static const recordGarbage = 'Garbage nikalo';
+  static const recordGarbage = 'Garbage';
   static const remainingStock = 'Remaining stock';
   static const stockAdjusted = 'Stock adjusted';
   static const garbageHistory = 'Garbage history';

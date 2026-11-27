@@ -48,4 +48,15 @@ class FinanceStrings {
   static const noExpenses = 'No expenses in this period.';
   static const amountInvalid = 'Enter an amount greater than 0';
   static const total = 'Total';
+
+  // net profit (cash-flow summary: sales - purchases - expenses - garbage)
+  static const totalSellingPrice = 'Selling price (Becha hua maal)';
+  static const totalBuyingPrice = 'Buying price (Khareeda hua maal)';
+  static const totalGarbageCost = 'Garbage cost';
+  static const profitStatus = 'Profit (Munafa)';
+  static const lossStatus = 'Loss (Nuqsaan)';
+  static const breakEvenStatus = 'Barabar (No profit, no loss)';
+  static const netProfitFormulaNote =
+      'Net Profit = Selling price − Buying price − Expenses − Garbage cost';
+  static const noNetProfitData = 'Is period mein koi purchase, sale, expense ya garbage nahi hai.';
 }

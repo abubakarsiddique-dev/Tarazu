@@ -21,6 +21,7 @@ import '../constants/app_strings.dart';
 import 'session.dart';
 import '../../features/inventory/presentation/report_screen.dart';
 import '../../features/finance/presentation/expenses_screen.dart';
+import '../../features/finance/presentation/net_profit_screen.dart';
 import '../../features/finance/presentation/profit_screen.dart';
 import '../../features/auth/application/auth_providers.dart';
 import '../../features/inventory/presentation/garbage_history_screen.dart';
@@ -44,6 +45,7 @@ class Routes {
   static const profileMissing = '/profile-missing';
   static const report = '/report';
   static const profit = '/profit';
+  static const netProfit = '/net-profit';
   static const expenses = '/expenses';
   static const staff = '/staff';
   static const staffSummary = '/staff-summary';
@@ -56,6 +58,7 @@ const _ownerOnlyPages = [
   Routes.staff,
   Routes.report,
   Routes.profit,
+  Routes.netProfit,
   Routes.expenses,
   Routes.history,
   Routes.sales,
@@ -144,6 +147,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: Routes.sales, builder: (_, _) => const SalesScreen()),
       GoRoute(path: Routes.report, builder: (_, _) => const ReportScreen()),
       GoRoute(path: Routes.profit, builder: (_, _) => const ProfitScreen()),
+      GoRoute(
+        path: Routes.netProfit,
+        builder: (_, _) => const NetProfitScreen(),
+      ),
       GoRoute(path: Routes.staff, builder: (_, _) => const StaffScreen()),
       GoRoute(path: Routes.expenses, builder: (_, _) => const ExpensesScreen()),
       GoRoute(
